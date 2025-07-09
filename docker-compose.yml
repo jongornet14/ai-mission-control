@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # Environment Services
+  trading-service:
+    build: ./environments/trading
+    container_name: ai-mc-trading
+    ports:
+      - "50051:50051"
+    environment:
+      - SERVICE_NAME=trading
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs/services:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50051/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - ai-mission-control
+
+  unity-service:
+    build: ./environments/unity
+    container_name: ai-mc-unity
+    ports:
+      - "50052:50052"
+    environment:
+      - SERVICE_NAME=unity
+      - LOG_LEVEL=info
+    volumes:
+      - ./unity_builds:/app/unity_builds
+      - ./logs/services:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50052/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - ai-mission-control
+
+  gym-service:
+    build: ./environments/gym
+    container_name: ai-mc-gym
+    ports:
+      - "50053:50053"
+    environment:
+      - SERVICE_NAME=gym
+      - LOG_LEVEL=info
+      - DISPLAY=:99
+    volumes:
+      - ./logs/services:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50053/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - ai-mission-control
+
+  modern-rl-service:
+    build: ./environments/modern-rl
+    container_name: ai-mc-modern-rl
+    ports:
+      - "50054:50054"
+    environment:
+      - SERVICE_NAME=modern-rl
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs/services:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50054/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - ai-mission-control
+
+  # API Gateway
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: ai-mc-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - TRADING_SERVICE_URL=trading-service:50051
+      - UNITY_SERVICE_URL=unity-service:50052
+      - GYM_SERVICE_URL=gym-service:50053
+      - MODERN_RL_SERVICE_URL=modern-rl-service:50054
+      - LOG_LEVEL=info
+    volumes:
+      - ./logs/services:/app/logs
+    depends_on:
+      trading-service:
+        condition: service_healthy
+      unity-service:
+        condition: service_healthy
+      gym-service:
+        condition: service_healthy
+      modern-rl-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ai-mission-control
+
+networks:
+  ai-mission-control:
+    driver: bridge
+    name: ai-mission-control-network
+
+volumes:
+  unity_builds:
+    driver: local
+    name: ai-mc-unity-builds

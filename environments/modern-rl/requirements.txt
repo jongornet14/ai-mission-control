@@ -1,0 +1,5 @@
+# Modern RL service specific requirements
+aiofiles==23.2.1
+python-multipart==0.0.6
+wandb==0.16.1
+optuna==3.5.0

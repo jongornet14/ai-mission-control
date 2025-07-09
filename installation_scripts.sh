@@ -833,6 +833,7 @@ main() {
     create_docker_compose
     create_requirements_files
     create_makefile
+    create_test_files
     
     echo ""
     echo -e "${GREEN}Container setup complete! Your microservices infrastructure is ready.${NC}"
@@ -851,7 +852,13 @@ main() {
     echo -e "${GREEN}2. Start services:${NC}"
     echo "   make up"
     echo ""
-    echo -e "${GREEN}3. Check status:${NC}"
+    echo -e "${GREEN}3. Install test dependencies:${NC}"
+    echo "   ./install-tests.sh"
+    echo ""
+    echo -e "${GREEN}4. Run tests:${NC}"
+    echo "   python test_ai_mission_control.py"
+    echo ""
+    echo -e "${GREEN}5. Check status:${NC}"
     echo "   make status"
     echo ""
     echo -e "${GREEN}4. Test API Gateway:${NC}"
