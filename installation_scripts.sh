@@ -137,7 +137,7 @@ RUN pip install --no-cache-dir \
     matplotlib==3.10.0
 
 # Trading specific
-RUN pip install --no-cache-dir yfinance
+RUN pip install --no-cache-dir finrl yfinance
 
 # Web framework with exact versions
 RUN pip install --no-cache-dir \
