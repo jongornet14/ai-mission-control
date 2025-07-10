@@ -1,8 +1,0 @@
-# Core dependencies
-fastapi>=0.100.0
-uvicorn>=0.22.0
-pydantic>=2.0.0
-asyncio-mqtt>=0.13.0
-aioredis>=2.0.0
-sqlalchemy>=2.0.0
-alembic>=1.11.0

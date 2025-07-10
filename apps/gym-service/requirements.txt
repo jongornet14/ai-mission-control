@@ -1,4 +1,0 @@
-# Gym service specific requirements
-aiofiles==23.2.1
-python-multipart==0.0.6
-opencv-python==4.8.1.78

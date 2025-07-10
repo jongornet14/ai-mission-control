@@ -1,0 +1,30 @@
+# FILENAME: requirements-host.txt
+# AI Mission Control - Host System Requirements
+# These are the minimal requirements for the host system to run the Docker container
+
+# System Requirements:
+# - Ubuntu 22.04.1 LTS (recommended) or compatible Linux distribution
+# - Docker Engine 20.10.0 or later
+# - Docker Compose 1.29.0 or later (optional)
+# - NVIDIA GPU drivers 470.57.02 or later (for GPU support)
+# - nvidia-docker2 (for GPU support)
+
+# Minimum Hardware:
+# - CPU: 4+ cores (8+ recommended)
+# - RAM: 8GB (16GB+ recommended for large experiments)
+# - Storage: 50GB free space (100GB+ recommended)
+# - GPU: NVIDIA GPU with 6GB+ VRAM (optional but recommended)
+
+# Python packages needed on host (only for setup script):
+# No additional Python packages required on host system
+# All ML/RL dependencies are contained within the Docker image
+
+# Installation verification:
+# Run: python3 setup.py install ./my_project
+# Or: ./build.sh
+
+# Quick verification commands:
+# docker --version          # Should be 20.10.0+
+# docker-compose --version  # Should be 1.29.0+
+# nvidia-smi                # Should show GPU info (if using GPU)
+# docker info | grep nvidia # Should show nvidia runtime (if using GPU)
