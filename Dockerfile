@@ -3,7 +3,7 @@
 # Base: Ubuntu 22.04.1 with CUDA support
 # Architecture: x86_64
 
-FROM nvidia/cuda:12.4-devel-ubuntu22.04
+FROM nvidia/cuda:12.1-devel-ubuntu22.04
 
 # Prevent timezone prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
