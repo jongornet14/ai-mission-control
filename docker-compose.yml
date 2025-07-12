@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ai-mission-control:
+    image: ai-mission-control:latest
+    container_name: ai-mission-control
+    volumes:
+      - ./:/workspace/project
+      - ai_mc_experiments:/workspace/experiments
+      - ai_mc_logs:/workspace/logs
+      - ai_mc_models:/workspace/models
+    ports:
+      - "8080:8080"  # Jupyter Lab
+      - "8888:8888"  # Alternative Jupyter port
+      - "6006:6006"  # TensorBoard
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/workspace/project
+    stdin_open: true
+    tty: true
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+
+volumes:
+  ai_mc_experiments:
+  ai_mc_logs:
+  ai_mc_models:
