@@ -1,0 +1,56 @@
+# FILENAME: configs/mujoco_halfcheetah.yaml
+# HalfCheetah-v4 with PPO - Standard locomotion task
+
+experiment:
+  name: "halfcheetah_ppo_standard"
+  save_dir: "./experiments"
+  seed: 42
+
+environment:
+  name: "HalfCheetah-v4"
+  type: "gym"
+  max_episode_steps: 1000
+  normalize_observations: true
+  normalize_rewards: true  # Important for continuous control
+  frame_skip: 1
+  action_repeat: 1
+
+algorithm:
+  name: "PPO"
+  learning_rate: 3e-4
+  gamma: 0.99
+  lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 0.0  # Usually disabled for continuous control
+  critic_coef: 1.0
+  max_grad_norm: 0.5
+  num_epochs: 10
+  batch_size: 256
+  num_cells: 256
+  activation: "tanh"  # Common for continuous control
+
+training:
+  total_frames: 1000000
+  frames_per_batch: 2048
+  eval_frequency: 50
+  eval_episodes: 10
+  save_frequency: 100
+  log_frequency: 10
+
+hyperparameter_optimization:
+  enabled: false
+  method: "GP-UCB"
+  t_ready: 100000
+  bounds:
+    learning_rate: [1e-5, 1e-3]
+    clip_epsilon: [0.1, 0.3]
+    lambda: [0.9, 1.0]
+    batch_size: [128, 512]
+
+logging:
+  tensorboard: true
+  wandb: false
+  save_models: true
+  save_videos: true
+  log_activations: false
+  log_level: "INFO"

@@ -1,0 +1,55 @@
+# FILENAME: configs/mujoco_manipulation.yaml
+# Fetch environments for manipulation tasks
+
+experiment:
+  name: "fetch_reach_experiment"
+  save_dir: "./experiments"
+  seed: 42
+
+environment:
+  name: "FetchReach-v2"  # or FetchPush-v2, FetchPickAndPlace-v2
+  type: "gym"
+  max_episode_steps: 50  # Shorter episodes for manipulation
+  normalize_observations: true
+  normalize_rewards: false  # Sparse rewards in manipulation
+  frame_skip: 1
+
+algorithm:
+  name: "PPO"
+  learning_rate: 1e-3  # Higher LR for sparse rewards
+  gamma: 0.99
+  lambda: 0.95
+  clip_epsilon: 0.2
+  entropy_coef: 1e-3  # Some exploration for sparse rewards
+  critic_coef: 1.0
+  max_grad_norm: 1.0
+  num_epochs: 20  # More epochs for sample efficiency
+  batch_size: 256
+  num_cells: 512
+  activation: "relu"  # ReLU often better for manipulation
+
+training:
+  total_frames: 2000000
+  frames_per_batch: 4096
+  eval_frequency: 100
+  eval_episodes: 20  # More episodes due to sparse rewards
+  save_frequency: 200
+  log_frequency: 25
+
+hyperparameter_optimization:
+  enabled: true  # Hyperopt useful for sparse reward tasks
+  method: "GP-UCB"
+  t_ready: 200000
+  bounds:
+    learning_rate: [1e-5, 1e-2]
+    clip_epsilon: [0.1, 0.5]
+    entropy_coef: [1e-5, 1e-2]
+    num_epochs: [10, 30]
+
+logging:
+  tensorboard: true
+  wandb: false
+  save_models: true
+  save_videos: true
+  log_activations: false
+  log_level: "INFO"

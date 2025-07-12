@@ -112,6 +112,24 @@ run-rl-tests: ## Run universal_rl.py with CartPole PPO config and logging
 			--training.total_episodes 500 \
 			--logging.save_videos \
 			--logging.log_activations
+
+.PHONY: run-mujoco
+run-mujoco: ## Run MuJoCo experiment (usage: make run-mujoco CONFIG=halfcheetah)
+ifndef CONFIG
+	@echo "Usage: make run-mujoco CONFIG=halfcheetah|ant|walker2d|humanoid|manipulation|hyperopt_suite"
+	@exit 1
+endif
+	docker run -it --rm \
+		--gpus all \
+		--name $(CONTAINER_NAME)-experiment \
+		-v $(PROJECT_DIR):/workspace/project \
+		-v ai-mc-experiments:/workspace/experiments \
+		-v ai-mc-logs:/workspace/logs \
+		-v ai-mc-models:/workspace/models \
+		$(IMAGE_NAME) python3 /workspace/project/universal_rl.py \
+			--config /workspace/configs/mujoco/mujoco_$(CONFIG).yaml \
+			--logging.save_videos \
+			--logging.log_activations
 			
 # Utility commands
 .PHONY: test
@@ -139,8 +157,9 @@ clean: ## Stop and remove all containers
 .PHONY: clean-volumes
 clean-volumes: ## Remove all volumes (WARNING: deletes all experiment data)
 	@echo "WARNING: This will delete all experiment data!"
-	@read -p "Are you sure? [y/N] " -n 1 -r; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+	@echo -n "Are you sure? [y/N] "; \
+	read REPLY; \
+	if [ "$$REPLY" = "y" ] || [ "$$REPLY" = "Y" ]; then \
 		docker volume rm ai-mc-experiments ai-mc-logs ai-mc-models 2>/dev/null || true; \
 		echo "Volumes removed."; \
 	else \
