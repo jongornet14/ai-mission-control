@@ -54,9 +54,9 @@ tensorboard: ## Start TensorBoard (port 6006)
 	docker run -it --rm \
 		--name $(CONTAINER_NAME)-tensorboard \
 		-p 6006:6006 \
-		-v ai-mc-logs:/workspace/logs \
-		$(IMAGE_NAME) tensorboard --logdir=/workspace/logs --host=0.0.0.0 --port=6006
-
+		-v ai-mc-experiments:/workspace/experiments \
+		$(IMAGE_NAME) tensorboard --logdir=/workspace/experiments --host=0.0.0.0 --port=6006
+		
 # Development commands
 .PHONY: dev
 dev: ## Start development container (detached with all services)
@@ -98,9 +98,21 @@ endif
 		$(IMAGE_NAME) python3 /workspace/project/$(SCRIPT)
 
 .PHONY: run-rl-tests
-run-rl-tests: ## Run rl_tests.py with default parameters
-	$(MAKE) run-experiment SCRIPT=rl_tests.py
-
+run-rl-tests: ## Run universal_rl.py with CartPole PPO config and logging
+	docker run -it --rm \
+		--gpus all \
+		--name $(CONTAINER_NAME)-experiment \
+		-v $(PROJECT_DIR):/workspace/project \
+		-v ai-mc-experiments:/workspace/experiments \
+		-v ai-mc-logs:/workspace/logs \
+		-v ai-mc-models:/workspace/models \
+		$(IMAGE_NAME) python3 /workspace/project/scripts/universal_rl.py \
+			--config /workspace/configs/cartpole_ppo.yaml \
+			--environment.name CartPole-v1 \
+			--training.total_episodes 500 \
+			--logging.save_videos \
+			--logging.log_activations
+			
 # Utility commands
 .PHONY: test
 test: ## Test the installation
