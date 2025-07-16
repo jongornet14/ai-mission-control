@@ -1,0 +1,62 @@
+{
+  "coordination_history": [
+    {
+      "sync_count": 1,
+      "timestamp": 1752696090.8042736,
+      "best_worker": 3,
+      "best_performance": 5.132236835259917,
+      "updated_workers": [
+        0,
+        1,
+        2
+      ],
+      "total_runtime": 60.00611662864685
+    },
+    {
+      "sync_count": 2,
+      "timestamp": 1752696120.8113377,
+      "best_worker": 1,
+      "best_performance": 12.729486955110588,
+      "updated_workers": [
+        0,
+        2,
+        3
+      ],
+      "total_runtime": 90.01317930221558
+    }
+  ],
+  "total_syncs": 2,
+  "coordinator_runtime": 90.01318502426147,
+  "worker_stats": {
+    "0": {},
+    "1": {},
+    "2": {},
+    "3": {}
+  },
+  "best_worker_history": [
+    {
+      "sync_count": 1,
+      "timestamp": 1752696090.8042736,
+      "best_worker": 3,
+      "best_performance": 5.132236835259917,
+      "updated_workers": [
+        0,
+        1,
+        2
+      ],
+      "total_runtime": 60.00611662864685
+    },
+    {
+      "sync_count": 2,
+      "timestamp": 1752696120.8113377,
+      "best_worker": 1,
+      "best_performance": 12.729486955110588,
+      "updated_workers": [
+        0,
+        2,
+        3
+      ],
+      "total_runtime": 90.01317930221558
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Distributed RL Worker Script
-Integrates with existing universal_rl.py for distributed training
+Clean version with CrazyLogger integration
 """
 
 import torch
@@ -16,8 +16,9 @@ from collections import defaultdict
 import pandas as pd
 from datetime import datetime
 
-# Import your existing RL components
-from universal_rl import create_ppo_agent, create_environment
+# Import your existing RL components and CrazyLogger
+# from universal_rl import create_ppo_agent, create_environment
+# from crazylogging.crazy_logger import CrazyLogger
 
 class DistributedWorker:
     def __init__(self, worker_id, shared_dir, max_episodes=100, sync_interval=10, timeout_minutes=30):
@@ -56,8 +57,24 @@ class DistributedWorker:
         self.episode_rewards = []
         self.training_metrics = defaultdict(list)
         
+        # Initialize CrazyLogger for comprehensive logging
+        self.log_dir = self.shared_dir / "worker_logs" / f"worker_{worker_id}"
+        try:
+            from crazylogging.crazy_logger import CrazyLogger
+            self.logger = CrazyLogger(
+                log_dir=str(self.log_dir),
+                experiment_name=f"distributed_worker_{worker_id}",
+                buffer_size=5000  # Smaller buffer for distributed workers
+            )
+        except ImportError:
+            print("Warning: CrazyLogger not available, using basic logging")
+            self.logger = None
+        
         print(f"Worker {worker_id} initialized")
         print(f"Shared directory: {shared_dir}")
+        if self.logger:
+            print(f"CrazyLogger directory: {self.log_dir}")
+            print(f"TensorBoard: tensorboard --logdir {self.log_dir / 'tensorboard'}")
         print(f"Max episodes per checkpoint: {max_episodes}")
 
     def should_sync(self):
@@ -106,6 +123,15 @@ class DistributedWorker:
                 
                 self.last_sync_time = time.time()
                 print(f"Worker {self.worker_id}: Loaded best model")
+                
+                # Log model update to CrazyLogger
+                if self.logger:
+                    self.logger.log_step(
+                        model_update=True,
+                        model_source="coordinator_best_model",
+                        sync_time=self.last_sync_time
+                    )
+                
                 return True
         except Exception as e:
             print(f"Worker {self.worker_id}: Error loading best model: {e}")
@@ -166,6 +192,80 @@ class DistributedWorker:
         
         return recent_avg - older_avg
 
+    def create_distributed_analysis_plots(self):
+        """Create custom analysis plots for distributed training"""
+        if len(self.episode_rewards) < 10:
+            return
+            
+        try:
+            import matplotlib.pyplot as plt
+            
+            fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+            
+            # Episode rewards with worker ID
+            axes[0, 0].plot(self.episode_rewards, alpha=0.7, label=f'Worker {self.worker_id}')
+            if len(self.episode_rewards) > 20:
+                window = min(20, len(self.episode_rewards) // 4)
+                moving_avg = np.convolve(self.episode_rewards, np.ones(window)/window, mode='valid')
+                axes[0, 0].plot(range(window-1, len(self.episode_rewards)), moving_avg, 'r-', linewidth=2, label=f'MA({window})')
+            axes[0, 0].set_xlabel('Episode')
+            axes[0, 0].set_ylabel('Reward')
+            axes[0, 0].set_title(f'Worker {self.worker_id} - Training Progress')
+            axes[0, 0].legend()
+            axes[0, 0].grid(True, alpha=0.3)
+            
+            # Reward change over time
+            if len(self.episode_rewards) >= 20:
+                reward_changes = []
+                for i in range(10, len(self.episode_rewards)):
+                    recent = np.mean(self.episode_rewards[i-9:i+1])
+                    older = np.mean(self.episode_rewards[i-19:i-9])
+                    reward_changes.append(recent - older)
+                
+                axes[0, 1].plot(reward_changes, alpha=0.7, color='green')
+                axes[0, 1].axhline(y=0, color='red', linestyle='--', alpha=0.7)
+                axes[0, 1].set_xlabel('Episode')
+                axes[0, 1].set_ylabel('Reward Change')
+                axes[0, 1].set_title(f'Worker {self.worker_id} - Performance Metric')
+                axes[0, 1].grid(True, alpha=0.3)
+            
+            # Reward distribution
+            axes[1, 0].hist(self.episode_rewards, bins=20, alpha=0.7, edgecolor='black')
+            axes[1, 0].axvline(np.mean(self.episode_rewards), color='red', linestyle='--', 
+                              label=f'Mean: {np.mean(self.episode_rewards):.2f}')
+            axes[1, 0].set_xlabel('Reward')
+            axes[1, 0].set_ylabel('Frequency')
+            axes[1, 0].set_title(f'Worker {self.worker_id} - Reward Distribution')
+            axes[1, 0].legend()
+            axes[1, 0].grid(True, alpha=0.3)
+            
+            # Training efficiency
+            training_time_hours = (time.time() - self.start_time) / 3600
+            episodes_per_hour = self.total_episodes / training_time_hours if training_time_hours > 0 else 0
+            
+            axes[1, 1].text(0.1, 0.8, f'Worker ID: {self.worker_id}', transform=axes[1, 1].transAxes, fontsize=12)
+            axes[1, 1].text(0.1, 0.7, f'Total Episodes: {self.total_episodes}', transform=axes[1, 1].transAxes, fontsize=12)
+            axes[1, 1].text(0.1, 0.6, f'Training Time: {training_time_hours:.2f}h', transform=axes[1, 1].transAxes, fontsize=12)
+            axes[1, 1].text(0.1, 0.5, f'Episodes/Hour: {episodes_per_hour:.1f}', transform=axes[1, 1].transAxes, fontsize=12)
+            axes[1, 1].text(0.1, 0.4, f'Best Reward: {max(self.episode_rewards):.2f}', transform=axes[1, 1].transAxes, fontsize=12)
+            axes[1, 1].text(0.1, 0.3, f'Current Trend: {self.calculate_reward_change():.3f}', transform=axes[1, 1].transAxes, fontsize=12)
+            axes[1, 1].set_title(f'Worker {self.worker_id} - Statistics')
+            axes[1, 1].axis('off')
+            
+            plt.tight_layout()
+            
+            # Log the plot using CrazyLogger
+            if self.logger:
+                self.logger.log_custom_plot(f'distributed_worker_{self.worker_id}_analysis', fig, self.total_episodes)
+            
+            # Save plot to shared directory as well
+            plot_path = self.shared_dir / f"worker_{self.worker_id}_analysis.png"
+            plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+            plt.close()
+            
+        except Exception as e:
+            print(f"Worker {self.worker_id}: Error creating analysis plots: {e}")
+
     def should_terminate(self):
         """Check if worker should terminate (coordinator signal or timeout)"""
         terminate_file = self.shared_dir / f"terminate_worker_{self.worker_id}.signal"
@@ -183,7 +283,7 @@ class DistributedWorker:
 
 def distributed_training_worker(args):
     """
-    Main worker training function - integrates with your existing code
+    Main worker training function - simplified version for testing
     """
     # Initialize worker
     worker = DistributedWorker(
@@ -194,75 +294,88 @@ def distributed_training_worker(args):
         timeout_minutes=args.timeout_minutes
     )
     
-    # Create environment and agent (using your existing functions)
-    env = create_environment(args.env, device=args.device)
-    policy_module, value_module, collector, loss_module, advantage_module, optimizer = create_ppo_agent(
-        env, args.device, args.lr, args.frames_per_batch, args.total_frames
-    )
-    
-    # Check for existing best model to start with
-    worker.load_best_model(policy_module, value_module)
+    # Log initial configuration
+    if worker.logger:
+        worker.logger.log_step(
+            worker_id=args.worker_id,
+            environment=args.env,
+            device=str(args.device),
+            learning_rate=args.lr,
+            max_episodes=args.max_episodes,
+            total_frames=args.total_frames,
+            distributed_training=True
+        )
     
     print(f"Worker {args.worker_id}: Starting training")
     
+    # Dummy training loop for testing (replace with your actual training)
     try:
-        # Training loop
-        for i, tensordict_data in enumerate(collector):
+        for episode in range(args.max_episodes):
             if worker.should_terminate():
                 break
-                
-            # Standard PPO training step (from your existing code)
-            for _ in range(args.num_epochs):
-                advantage_module(tensordict_data)
-                data_view = tensordict_data.reshape(-1)
-                
-                # Mini-batch training
-                for _ in range(args.frames_per_batch // args.sub_batch_size):
-                    indices = torch.randperm(len(data_view))[:args.sub_batch_size]
-                    subdata = data_view[indices]
-                    
-                    loss_vals = loss_module(subdata.to(args.device))
-                    loss_value = (
-                        loss_vals["loss_objective"] +
-                        loss_vals["loss_critic"] +
-                        loss_vals["loss_entropy"]
-                    )
-                    
-                    loss_value.backward()
-                    torch.nn.utils.clip_grad_norm_(loss_module.parameters(), args.max_grad_norm)
-                    optimizer.step()
-                    optimizer.zero_grad()
             
-            # Record episode metrics
-            episode_reward = tensordict_data["next", "reward"].mean().item()
+            # Simulate episode
+            time.sleep(1)  # Simulate training time
+            episode_reward = np.random.normal(100, 20)  # Simulate reward
             worker.episode_rewards.append(episode_reward)
             worker.total_episodes += 1
+            
+            # Log episode data
+            episode_metrics = {
+                'episode_reward': episode_reward,
+                'total_episodes': worker.total_episodes,
+                'worker_id': worker.worker_id,
+                'reward_change': worker.calculate_reward_change()
+            }
+            
+            if worker.logger:
+                worker.logger.log_episode(**episode_metrics)
             
             # Check for model updates periodically
             if worker.should_sync():
                 if worker.check_for_model_update():
-                    worker.load_best_model(policy_module, value_module)
+                    print(f"Worker {args.worker_id}: Would load best model here")
             
-            # Save checkpoint every max_episodes
-            if worker.total_episodes % worker.max_episodes == 0:
-                worker.save_checkpoint(policy_module, value_module, optimizer)
+            # Save checkpoint periodically
+            if worker.total_episodes % 10 == 0:
+                # For testing, create dummy model states
+                class DummyModule:
+                    def state_dict(self):
+                        return {'dummy': torch.tensor([1.0])}
+                
+                dummy_policy = DummyModule()
+                dummy_value = DummyModule()
+                dummy_optimizer = DummyModule()
+                
+                worker.save_checkpoint(dummy_policy, dummy_value, dummy_optimizer)
+                worker.create_distributed_analysis_plots()
+                
                 print(f"Worker {args.worker_id}: Completed {worker.total_episodes} episodes")
             
             # Progress update
-            if worker.total_episodes % 10 == 0:
-                avg_reward = np.mean(worker.episode_rewards[-10:])
+            if worker.total_episodes % 5 == 0:
+                avg_reward = np.mean(worker.episode_rewards[-5:])
                 print(f"Worker {args.worker_id}: Episode {worker.total_episodes}, Avg Reward: {avg_reward:.4f}")
                 
     except KeyboardInterrupt:
         print(f"Worker {args.worker_id}: Training interrupted")
     except Exception as e:
         print(f"Worker {args.worker_id}: Error during training: {e}")
+        if worker.logger:
+            worker.logger.log_step(error=str(e), error_type="training_exception")
     finally:
-        # Final checkpoint
-        worker.save_checkpoint(policy_module, value_module, optimizer)
+        # Final analysis and cleanup
+        worker.create_distributed_analysis_plots()
+        
+        if worker.logger:
+            final_summary = worker.logger.generate_final_report()
+            worker.logger.close()
+            print(f"Worker {args.worker_id}: Final report: {final_summary}")
+        
         print(f"Worker {args.worker_id}: Training completed - Total episodes: {worker.total_episodes}")
 
 def main():
+    """Main entry point"""
     parser = argparse.ArgumentParser(description='Distributed RL Worker')
     
     # Worker-specific args
@@ -272,7 +385,7 @@ def main():
     parser.add_argument('--sync_interval', type=int, default=10, help='Episodes between sync checks')
     parser.add_argument('--timeout_minutes', type=int, default=30, help='Max minutes before forced sync')
     
-    # Standard RL args (from your existing code)
+    # Standard RL args
     parser.add_argument('--env', type=str, default='HalfCheetah-v4', help='Environment name')
     parser.add_argument('--device', type=str, default='cuda:0', help='Device to use')
     parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')

@@ -1,0 +1,269 @@
+version: '3.8'
+
+services:
+  # Coordinator service
+  coordinator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-coordinator
+    environment:
+      - PYTHONPATH=/workspace
+      - CUDA_VISIBLE_DEVICES=""  # Coordinator runs on CPU
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    command: >
+      python /workspace/project/distributed_coordinator.py
+      --shared_dir /workspace/distributed_shared
+      --num_workers 4
+      --check_interval 30
+      --min_episodes 50
+    networks:
+      - rl-training
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/workspace/distributed_shared/coordinator') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Worker 0
+  worker-0:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-0
+    environment:
+      - PYTHONPATH=/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - WORKER_ID=0
+      - ENV=${ENV:-HalfCheetah-v4}
+      - DISPLAY=:99
+      - XVFB_RES=1280x1024x24
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    command: >
+      python /workspace/project/distributed_worker.py
+      --worker_id 0
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-HalfCheetah-v4}
+      --device cuda:0
+      --max_episodes 100
+      --lr 3e-4
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 3G
+    healthcheck:
+      test: ["CMD", "nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # Worker 1
+  worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-1
+    environment:
+      - PYTHONPATH=/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - WORKER_ID=1
+      - ENV=${ENV:-HalfCheetah-v4}
+      - DISPLAY=:99
+      - XVFB_RES=1280x1024x24
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    command: >
+      python /workspace/project/distributed_worker.py
+      --worker_id 1
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-HalfCheetah-v4}
+      --device cuda:0
+      --max_episodes 100
+      --lr 3e-4
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 3G
+    healthcheck:
+      test: ["CMD", "nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # Worker 2
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-2
+    environment:
+      - PYTHONPATH=/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - WORKER_ID=2
+      - ENV=${ENV:-HalfCheetah-v4}
+      - DISPLAY=:99
+      - XVFB_RES=1280x1024x24
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    command: >
+      python /workspace/project/distributed_worker.py
+      --worker_id 2
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-HalfCheetah-v4}
+      --device cuda:0
+      --max_episodes 100
+      --lr 3e-4
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 3G
+    healthcheck:
+      test: ["CMD", "nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # Worker 3
+  worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-3
+    environment:
+      - PYTHONPATH=/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - WORKER_ID=3
+      - ENV=${ENV:-HalfCheetah-v4}
+      - DISPLAY=:99
+      - XVFB_RES=1280x1024x24
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    command: >
+      python /workspace/project/distributed_worker.py
+      --worker_id 3
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-HalfCheetah-v4}
+      --device cuda:0
+      --max_episodes 100
+      --lr 3e-4
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 3G
+    healthcheck:
+      test: ["CMD", "nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # TensorBoard for distributed training
+  tensorboard-distributed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-tensorboard-distributed
+    environment:
+      - PYTHONPATH=/workspace
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+    command: >
+      tensorboard 
+      --logdir=/workspace/distributed_shared/tensorboard_logs
+      --host=0.0.0.0
+      --port=6007
+      --reload_interval=30
+    ports:
+      - "6007:6007"
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+
+  # Optional: Monitoring dashboard
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-monitor
+    environment:
+      - PYTHONPATH=/workspace
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+    command: >
+      python -m http.server 8081
+    ports:
+      - "8081:8081"
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+
+networks:
+  rl-training:
+    driver: bridge
+
+volumes:
+  distributed_shared:
+    driver: local
