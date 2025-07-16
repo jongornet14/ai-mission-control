@@ -8,15 +8,16 @@ services:
       dockerfile: Dockerfile
     container_name: rl-coordinator
     environment:
-      - PYTHONPATH=/workspace
+      - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=""  # Coordinator runs on CPU
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
       - ./logs:/workspace/logs
       - .:/workspace/project
+    working_dir: /workspace/project
     command: >
-      python /workspace/project/distributed_coordinator.py
+      python distributed_coordinator.py
       --shared_dir /workspace/distributed_shared
       --num_workers 4
       --check_interval 30
@@ -37,7 +38,7 @@ services:
       dockerfile: Dockerfile
     container_name: rl-worker-0
     environment:
-      - PYTHONPATH=/workspace
+      - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - WORKER_ID=0
       - ENV=${ENV:-HalfCheetah-v4}
@@ -48,8 +49,9 @@ services:
       - ./configs:/workspace/configs
       - ./logs:/workspace/logs
       - .:/workspace/project
+    working_dir: /workspace/project
     command: >
-      python /workspace/project/distributed_worker.py
+      python distributed_worker.py
       --worker_id 0
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-HalfCheetah-v4}
@@ -83,7 +85,7 @@ services:
       dockerfile: Dockerfile
     container_name: rl-worker-1
     environment:
-      - PYTHONPATH=/workspace
+      - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - WORKER_ID=1
       - ENV=${ENV:-HalfCheetah-v4}
@@ -94,8 +96,9 @@ services:
       - ./configs:/workspace/configs
       - ./logs:/workspace/logs
       - .:/workspace/project
+    working_dir: /workspace/project
     command: >
-      python /workspace/project/distributed_worker.py
+      python distributed_worker.py
       --worker_id 1
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-HalfCheetah-v4}
@@ -129,7 +132,7 @@ services:
       dockerfile: Dockerfile
     container_name: rl-worker-2
     environment:
-      - PYTHONPATH=/workspace
+      - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - WORKER_ID=2
       - ENV=${ENV:-HalfCheetah-v4}
@@ -140,8 +143,9 @@ services:
       - ./configs:/workspace/configs
       - ./logs:/workspace/logs
       - .:/workspace/project
+    working_dir: /workspace/project
     command: >
-      python /workspace/project/distributed_worker.py
+      python distributed_worker.py
       --worker_id 2
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-HalfCheetah-v4}
@@ -175,7 +179,7 @@ services:
       dockerfile: Dockerfile
     container_name: rl-worker-3
     environment:
-      - PYTHONPATH=/workspace
+      - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - WORKER_ID=3
       - ENV=${ENV:-HalfCheetah-v4}
@@ -186,8 +190,9 @@ services:
       - ./configs:/workspace/configs
       - ./logs:/workspace/logs
       - .:/workspace/project
+    working_dir: /workspace/project
     command: >
-      python /workspace/project/distributed_worker.py
+      python distributed_worker.py
       --worker_id 3
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-HalfCheetah-v4}
@@ -226,11 +231,16 @@ services:
       - ./distributed_shared:/workspace/distributed_shared
       - ./logs:/workspace/logs
     command: >
-      tensorboard 
-      --logdir=/workspace/distributed_shared/tensorboard_logs
-      --host=0.0.0.0
-      --port=6007
-      --reload_interval=30
+      bash -c "
+      echo 'Waiting for log directories...';
+      sleep 10;
+      find /workspace/distributed_shared -name 'tensorboard' -type d;
+      if [ -d '/workspace/distributed_shared/worker_logs' ]; then
+        tensorboard --logdir=/workspace/distributed_shared/worker_logs --host=0.0.0.0 --port=6007 --reload_interval=30;
+      else
+        tensorboard --logdir=/workspace/distributed_shared --host=0.0.0.0 --port=6007 --reload_interval=30;
+      fi
+      "
     ports:
       - "6007:6007"
     networks:

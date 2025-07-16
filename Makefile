@@ -158,14 +158,46 @@ distributed-tensorboard: ## Start TensorBoard for ALL distributed workers (port 
 		pkill -f "tensorboard.*6007" 2>/dev/null || true; \
 		sleep 2; \
 	fi
-	@if [ ! -d "distributed_shared/worker_logs" ]; then \
-		echo "❌ Directory distributed_shared/worker_logs not found. Start training first with: make distributed-up"; \
+	@# Check multiple possible log locations
+	@LOG_DIR=""; \
+	if [ -d "distributed_shared/worker_logs" ]; then \
+		LOG_DIR="distributed_shared/worker_logs"; \
+	elif [ -d "distributed_shared" ] && find distributed_shared -name "tensorboard" -type d | head -1 >/dev/null 2>&1; then \
+		LOG_DIR="distributed_shared"; \
+		echo "📁 Found tensorboard logs in distributed_shared subdirectories"; \
+	else \
+		echo "❌ No tensorboard logs found. Checking what exists:"; \
+		ls -la distributed_shared/ 2>/dev/null || echo "distributed_shared directory not found"; \
+		find distributed_shared -name "*tensorboard*" -o -name "*log*" 2>/dev/null || echo "No log files found"; \
+		echo "💡 Try running training longer to generate logs, or check: make distributed-logs"; \
 		exit 1; \
-	fi
-	nohup tensorboard --logdir=distributed_shared/worker_logs --host=0.0.0.0 --port=6007 --reload_interval=30 > tensorboard_distributed.log 2>&1 &
+	fi; \
+	echo "📊 Using log directory: $$LOG_DIR"; \
+	nohup tensorboard --logdir=$$LOG_DIR --host=0.0.0.0 --port=6007 --reload_interval=30 > tensorboard_distributed.log 2>&1 &
 	@echo "✅ TensorBoard started in background"
 	@echo "📊 View at: http://localhost:6007"
 	@echo "📋 Logs: tail -f tensorboard_distributed.log"
+
+.PHONY: distributed-find-logs
+distributed-find-logs: ## Find where the actual log files are located
+	@echo "🔍 Searching for distributed training logs..."
+	@echo "============================================="
+	@if [ -d "distributed_shared" ]; then \
+		echo "📁 distributed_shared contents:"; \
+		ls -la distributed_shared/; \
+		echo ""; \
+		echo "🔍 Searching for tensorboard directories:"; \
+		find distributed_shared -name "tensorboard" -type d 2>/dev/null || echo "No tensorboard directories found"; \
+		echo ""; \
+		echo "🔍 Searching for any log files:"; \
+		find distributed_shared -name "*.log" 2>/dev/null | head -10 || echo "No .log files found"; \
+		echo ""; \
+		echo "🔍 Directory structure (2 levels):"; \
+		find distributed_shared -maxdepth 2 -type d 2>/dev/null || echo "Cannot show directory structure"; \
+	else \
+		echo "❌ distributed_shared directory not found"; \
+		echo "💡 Run: make distributed-up"; \
+	fi
 
 .PHONY: distributed-tensorboard-worker-0
 distributed-tensorboard-worker-0: ## Start TensorBoard for worker-0 only (port 6008)
@@ -382,6 +414,33 @@ distributed-ports: ## Check what's using TensorBoard ports
 	@echo ""
 	@echo "💡 To stop existing TensorBoard: make distributed-tensorboard-stop"
 
+.PHONY: distributed-check-crazylogger
+distributed-check-crazylogger: ## Check if CrazyLogger is working in workers
+	@echo "🔍 Checking CrazyLogger status in all workers..."
+	@for worker in 0 1 2 3; do \
+		echo "=== Worker $$worker ==="; \
+		docker exec rl-worker-$$worker bash -c "\
+			echo 'Python packages:'; \
+			python -c 'import sys; print(sys.path)' 2>/dev/null || echo 'Python path issue'; \
+			echo 'CrazyLogger import test:'; \
+			python -c 'from crazylogging.crazy_logger import CrazyLogger; print(\"CrazyLogger OK\")' 2>/dev/null || echo 'CrazyLogger import failed'; \
+			echo 'Log directories:'; \
+			find /workspace -path '*/tensorboard*' -o -path '*crazy*' -o -path '*experiment*' 2>/dev/null || echo 'No experiment logs'; \
+		"; \
+	done
+
+.PHONY: distributed-debug-logs
+distributed-debug-logs: ## Debug why no tensorboard logs exist
+	@echo "🐛 Debugging distributed training logs..."
+	@echo "1. Checking if training is actually running RL (not dummy):"
+	@make distributed-logs-worker-0 | tail -20
+	@echo ""
+	@echo "2. Checking for any experiment files:"
+	@docker exec rl-worker-0 find /workspace -name "*experiment*" -o -name "*crazy*" 2>/dev/null || echo "No experiment files"
+	@echo ""
+	@echo "3. Checking Python imports in worker:"
+	@docker exec rl-worker-0 python -c "from crazylogging.crazy_logger import CrazyLogger; print('✅ CrazyLogger works')" 2>/dev/null || echo "❌ CrazyLogger import failed"
+	
 .PHONY: distributed-analysis
 distributed-analysis: ## Show distributed training analysis and file structure
 	@echo "📊 Distributed Training Analysis"
