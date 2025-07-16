@@ -30,6 +30,7 @@ class UniversalRLTrainer:
     def __init__(self, config_path=None, **kwargs):
         """Initialize trainer with config file or direct parameters"""
         self.config = self.load_config(config_path, **kwargs)
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         # Setup experiment directory first
@@ -71,42 +72,29 @@ class UniversalRLTrainer:
     
     def get_default_config(self):
         """Default configuration"""
-        return {
-            'experiment': {
-                'name': 'crazy_logged_experiment',
-                'save_dir': '/workspace/experiments',
-                'seed': 42,
-            },
-            'environment': {
-                'name': 'CartPole-v1',
-                'normalize_observations': True,
-                'max_episode_steps': 500,
-            },
-            'algorithm': {
-                'name': 'PPO',
-                'learning_rate': 3e-4,
-                'gamma': 0.99,
-                'lambda': 0.95,
-                'clip_epsilon': 0.2,
-                'entropy_coef': 1e-4,
-                'num_cells': 256
-            },
-            'training': {
-                'total_episodes': 1000,
-                'max_steps_per_episode': 500,
-                'eval_frequency': 50,
-                'eval_episodes': 5,
-                'save_frequency': 100,
-                'log_frequency': 1,  # Log every episode
-            },
-            'logging': {
-                'save_models': True,
-                'save_videos': False,
-                'log_activations': False,
-                'activation_frequency': 100,
-            }
-        }
+        error_msg = f"❌ {description} not found: {file_path}"
     
+        # Log current directory and nearby files for debugging
+        current_dir = Path.cwd()
+        print(f"❌ {error_msg}")
+        print(f"📍 Current directory: {current_dir}")
+        print(f"📁 Directory contents: {list(current_dir.iterdir())}")
+        
+        # If it's in a subdirectory, check parent directory
+        if path.parent != current_dir:
+            print(f"📁 Parent directory {path.parent} contents: {list(path.parent.iterdir()) if path.parent.exists() else 'Directory does not exist'}")
+        
+        # Log to your logger if available
+        if hasattr(self, 'logger'):
+            self.logger.log_step(
+                error="FileNotFound", 
+                file_path=str(file_path),
+                current_dir=str(current_dir),
+                description=description
+            )
+        
+        raise FileNotFoundError(error_msg)
+
     def set_nested_config(self, config, key, value):
         """Set nested configuration value using dot notation"""
         keys = key.split('.')
@@ -130,13 +118,14 @@ class UniversalRLTrainer:
     def create_environment(self):
         """Create and configure the environment"""
         env_config = self.config['environment']
-        
+
         wrapper = GymEnvironmentWrapper(
             env_name=env_config['name'],
+            device=self.device,  # Add this line
             normalize_observations=env_config.get('normalize_observations', True),
             max_episode_steps=env_config.get('max_episode_steps', None)
         )
-        
+
         self.env = wrapper.create()
         
         # Log environment info
@@ -177,6 +166,10 @@ class UniversalRLTrainer:
         self.logger.performance_tracker.start_timer('episode_collection')
         
         obs = self.env.reset()
+        
+        # REMOVE video collection from training episodes
+        # frames = [] if self.config['logging']['save_videos'] else None
+        
         episode_data = {
             'observations': [obs],
             'actions': [],
@@ -188,7 +181,6 @@ class UniversalRLTrainer:
         
         episode_reward = 0
         episode_length = 0
-        frames = [] if self.config['logging']['save_videos'] else None
         
         for step in range(self.config['training']['max_steps_per_episode']):
             self.logger.performance_tracker.start_timer('action_selection')
@@ -209,38 +201,25 @@ class UniversalRLTrainer:
             episode_data['log_probs'].append(log_prob)
             episode_data['observations'].append(next_obs)
             episode_data['dones'].append(done)
-            
-            # Save frame for video
-            if frames is not None:
-                try:
-                    frame = self.env.render(mode='rgb_array')
-                    frames.append(frame)
-                except:
-                    pass  # Skip if rendering not available
-            
-            # Log step data with EVERYTHING
+
+            # Log step metrics
+            obs_stats = tensor_stats(obs)
             step_metrics = {
-                'step_reward': reward,
-                'step_action': action if np.isscalar(action) else np.mean(action),
+                'step_reward': to_scalar(reward),
+                'step_action': to_scalar(action),
                 'step_log_prob': log_prob,
-                'step_obs_mean': np.mean(obs),
-                'step_obs_std': np.std(obs),
-                'step_obs_max': np.max(obs),
-                'step_obs_min': np.min(obs),
+                'step_obs_mean': obs_stats['mean'],
+                'step_obs_std': obs_stats['std'],
+                'step_obs_max': obs_stats['max'],
+                'step_obs_min': obs_stats['min'],
                 'action_selection_time': action_time,
                 'env_step_time': env_step_time,
-                'cumulative_reward': episode_reward + reward,
+                'cumulative_reward': episode_reward + to_scalar(reward),
             }
-            
-            # Add info from environment if available
-            if info:
-                for key, value in info.items():
-                    if isinstance(value, (int, float, np.number)):
-                        step_metrics[f'env_info_{key}'] = value
             
             self.logger.log_step(**step_metrics)
             
-            episode_reward += reward
+            episode_reward += to_scalar(reward)
             episode_length += 1
             obs = next_obs
             
@@ -249,12 +228,8 @@ class UniversalRLTrainer:
         
         episode_collection_time = self.logger.performance_tracker.end_timer('episode_collection')
         
-        # Save video if enabled
-        if frames and len(frames) > 0:
-            self.logger.log_video(frames, f"episode_{self.current_episode}")
-        
         return episode_data, episode_reward, episode_length, episode_collection_time
-    
+
     def train_on_episode(self, episode_data):
         """Train algorithm on episode data with detailed logging"""
         self.logger.performance_tracker.start_timer('training')
@@ -280,7 +255,7 @@ class UniversalRLTrainer:
         if self.current_episode % self.config['training']['save_frequency'] == 0:
             self.logger.log_model_state(
                 self.algorithm.policy_net, 
-                self.algorithm.optimizer,
+                self.algorithm.value_optimizer,
                 train_metrics.get('loss_total', 0),
                 save_weights=True
             )
@@ -288,7 +263,7 @@ class UniversalRLTrainer:
         # Log activations periodically
         if (self.config['logging']['log_activations'] and 
             self.current_episode % self.config['logging']['activation_frequency'] == 0):
-            sample_obs = torch.FloatTensor(episode_data['observations'][0]).unsqueeze(0).to(self.device)
+            sample_obs = episode_data['observations'][0].unsqueeze(0).to(self.device)
             self.logger.log_activations(self.algorithm.policy_net, sample_obs)
         
         return train_metrics
@@ -299,33 +274,53 @@ class UniversalRLTrainer:
         
         eval_rewards = []
         eval_lengths = []
-        eval_success_rate = 0
+        
+        # Check if we should record videos this evaluation
+        should_record = (self.config['logging'].get('save_eval_videos', False) and 
+                        self.current_episode % self.config['logging'].get('eval_video_frequency', 100) == 0)
         
         for eval_ep in range(self.config['training']['eval_episodes']):
             obs = self.env.reset()
             eval_reward = 0
             eval_length = 0
             
+            # Only record video for first eval episode when scheduled
+            frames = [] if (should_record and eval_ep == 0) else None
+            
             for step in range(self.config['training']['max_steps_per_episode']):
                 action, _ = self.algorithm.get_action(obs)
                 obs, reward, done, info = self.env.step(action)
                 
-                eval_reward += reward
+                # Capture frame if recording
+                if frames is not None:
+                    try:
+                        frame = self.env.render()
+                        frames.append(frame)
+                    except Exception as e:
+                        print(f"❌ Eval frame capture failed: {e}")
+                        frames = None
+                
+                eval_reward += to_scalar(reward)
                 eval_length += 1
                 
                 if done:
                     # Check for success (environment specific)
-                    if hasattr(self.env, 'spec') and self.env.spec:
-                        if (hasattr(self.env.spec, 'reward_threshold') and 
-                            self.env.spec.reward_threshold and 
-                            eval_reward >= self.env.spec.reward_threshold):
-                            eval_success_rate += 1
+                    if (hasattr(self.env, 'spec') and 
+                        self.env.spec and 
+                        hasattr(self.env.spec, 'reward_threshold') and 
+                        self.env.spec.reward_threshold and 
+                        eval_reward >= self.env.spec.reward_threshold):
+                        eval_success_rate += 1
                     break
-                    
+
             eval_rewards.append(eval_reward)
             eval_lengths.append(eval_length)
+            
+            # Save evaluation video
+            if frames and len(frames) > 0:
+                self.logger.log_video(frames, f"eval_episode_{self.current_episode}")
+                # print(f"📹 Saved evaluation video for episode {self.current_episode}")
         
-        eval_success_rate /= self.config['training']['eval_episodes']
         evaluation_time = self.logger.performance_tracker.end_timer('evaluation')
         
         eval_metrics = {
@@ -335,7 +330,6 @@ class UniversalRLTrainer:
             'eval_reward_max': np.max(eval_rewards),
             'eval_length_mean': np.mean(eval_lengths),
             'eval_length_std': np.std(eval_lengths),
-            'eval_success_rate': eval_success_rate,
             'evaluation_time': evaluation_time,
         }
         
@@ -343,6 +337,8 @@ class UniversalRLTrainer:
     
     def train(self):
         """Main training loop with CRAZY comprehensive logging"""
+        from tqdm import tqdm  # Add this import
+        
         print(f"\n🚀 Starting training with CrazyLogger...")
         print(f"Device: {self.device}")
         print("=" * 50)
@@ -354,6 +350,12 @@ class UniversalRLTrainer:
         
         training_config = self.config['training']
         
+        if training_config.get('total_frames'):
+            max_steps = training_config.get('max_steps_per_episode', 1000)
+            estimated_episodes = training_config['total_frames'] // max_steps
+            training_config['total_episodes'] = estimated_episodes
+            print(f"🔄 Using {estimated_episodes} episodes for {training_config['total_frames']} frames")
+
         # Log initial configuration
         self.logger.log_step(**{
             'config_seed': self.config['experiment']['seed'],
@@ -361,8 +363,10 @@ class UniversalRLTrainer:
             'config_device': str(self.device),
         })
         
-        # Main training loop
-        for episode in range(training_config['total_episodes']):
+        # Main training loop with tqdm progress bar
+        pbar = tqdm(range(training_config['total_episodes']), desc="Training Episodes")
+        
+        for episode in pbar:
             self.current_episode = episode
             
             # Collect episode with full logging
@@ -375,32 +379,40 @@ class UniversalRLTrainer:
             self.episode_rewards.append(episode_reward)
             self.episode_lengths.append(episode_length)
             
+            # Update progress bar with current reward
+            pbar.set_postfix({
+                'Reward': f'{to_scalar(episode_reward):.2f}',
+                'Length': episode_length,
+                'Best': f'{self.best_reward:.2f}'
+            })
+            
             # Evaluation
             eval_metrics = {}
             if episode % training_config['eval_frequency'] == 0:
                 eval_metrics = self.evaluate_policy()
                 
-                print(f"Episode {episode:4d} | "
-                      f"Reward: {eval_metrics['eval_reward_mean']:7.2f} ± {eval_metrics['eval_reward_std']:5.2f} | "
-                      f"Length: {eval_metrics['eval_length_mean']:6.1f} | "
-                      f"Success: {eval_metrics['eval_success_rate']:5.2f}")
+                # print(f"\nEpisode {episode:4d} | "
+                #     f"Reward: {eval_metrics['eval_reward_mean']:7.2f} ± {eval_metrics['eval_reward_std']:5.2f} | "
+                #     f"Length: {eval_metrics['eval_length_mean']:6.1f} | "
+                #     f"Success: {eval_metrics['eval_success_rate']:5.2f}")
                 
                 # Update best reward
                 current_reward = eval_metrics['eval_reward_mean']
                 if current_reward > self.best_reward:
                     self.best_reward = current_reward
-                    print(f"🏆 New best reward: {current_reward:.2f}")
+                    # print(f"🏆 New best reward: {current_reward:.2f}")
             
-            # Comprehensive episode logging
+            # Replace the episode_metrics section with:
+            episode_rewards_np = to_numpy(self.episode_rewards)
             episode_metrics = {
-                'episode_reward': episode_reward,
+                'episode_reward': to_scalar(episode_reward),
                 'episode_length': episode_length,
                 'episode_collection_time': collection_time,
                 'best_reward_so_far': self.best_reward,
-                'avg_reward_last_100': np.mean(self.episode_rewards[-100:]) if len(self.episode_rewards) >= 100 else np.mean(self.episode_rewards),
-                'reward_trend': episode_reward - np.mean(self.episode_rewards[-10:]) if len(self.episode_rewards) >= 10 else 0,
+                'avg_reward_last_100': np.mean(episode_rewards_np[-100:]) if len(episode_rewards_np) >= 100 else np.mean(episode_rewards_np),
+                'reward_trend': to_scalar(episode_reward) - np.mean(episode_rewards_np[-10:]) if len(episode_rewards_np) >= 10 else 0,
             }
-            
+                        
             # Combine all metrics
             all_metrics = {**episode_metrics, **train_metrics, **eval_metrics}
             
@@ -415,9 +427,11 @@ class UniversalRLTrainer:
             current_hyperparams = self.algorithm.get_hyperparameters()
             self.logger.log_hyperparameters(current_hyperparams, episode_reward)
             
-            # Create custom plots periodically
-            if episode % 200 == 0 and episode > 0:
-                self.create_custom_plots()
+            # # Create custom plots periodically
+            # if episode % 200 == 0 and episode > 0:
+            #     self.create_custom_plots()
+        
+        pbar.close()  # Close the progress bar
         
         # Final evaluation and report
         final_eval = self.evaluate_policy()
@@ -432,23 +446,26 @@ class UniversalRLTrainer:
         self.logger.close()
         
         return final_summary
-    
+
     def create_custom_plots(self):
         """Create custom analysis plots"""
         import matplotlib.pyplot as plt
         
-        if len(self.episode_rewards) < 10:
+        # Convert to numpy once for all plotting
+        rewards_np = to_numpy(self.episode_rewards)
+        lengths_np = to_numpy(self.episode_lengths)
+        
+        if len(rewards_np) < 10:
             return
         
-        # Reward progression plot
         fig, axes = plt.subplots(2, 2, figsize=(12, 8))
         
         # Episode rewards
-        axes[0, 0].plot(self.episode_rewards, alpha=0.6, label='Episode Reward')
-        if len(self.episode_rewards) > 20:
-            window = min(50, len(self.episode_rewards) // 5)
-            moving_avg = np.convolve(self.episode_rewards, np.ones(window)/window, mode='valid')
-            axes[0, 0].plot(range(window-1, len(self.episode_rewards)), moving_avg, 'r-', linewidth=2, label=f'MA({window})')
+        axes[0, 0].plot(rewards_np, alpha=0.6, label='Episode Reward')
+        if len(rewards_np) > 20:  # Use rewards_np consistently
+            window = min(50, len(rewards_np) // 5)
+            moving_avg = np.convolve(rewards_np, np.ones(window)/window, mode='valid')  # Use rewards_np
+            axes[0, 0].plot(range(window-1, len(rewards_np)), moving_avg, 'r-', linewidth=2, label=f'MA({window})')
         axes[0, 0].set_xlabel('Episode')
         axes[0, 0].set_ylabel('Reward')
         axes[0, 0].set_title('Training Progress')
@@ -456,15 +473,15 @@ class UniversalRLTrainer:
         axes[0, 0].grid(True, alpha=0.3)
         
         # Episode lengths
-        axes[0, 1].plot(self.episode_lengths, alpha=0.6, color='green')
+        axes[0, 1].plot(lengths_np, alpha=0.6, color='green')  # Use lengths_np
         axes[0, 1].set_xlabel('Episode')
         axes[0, 1].set_ylabel('Episode Length')
         axes[0, 1].set_title('Episode Lengths')
         axes[0, 1].grid(True, alpha=0.3)
         
         # Reward distribution
-        axes[1, 0].hist(self.episode_rewards, bins=30, alpha=0.7, edgecolor='black')
-        axes[1, 0].axvline(np.mean(self.episode_rewards), color='red', linestyle='--', label=f'Mean: {np.mean(self.episode_rewards):.2f}')
+        axes[1, 0].hist(rewards_np, bins=30, alpha=0.7, edgecolor='black')  # Use rewards_np
+        axes[1, 0].axvline(np.mean(rewards_np), color='red', linestyle='--', label=f'Mean: {np.mean(rewards_np):.2f}')
         axes[1, 0].set_xlabel('Reward')
         axes[1, 0].set_ylabel('Frequency')
         axes[1, 0].set_title('Reward Distribution')
@@ -472,7 +489,7 @@ class UniversalRLTrainer:
         axes[1, 0].grid(True, alpha=0.3)
         
         # Recent performance (last 100 episodes)
-        recent_rewards = self.episode_rewards[-100:] if len(self.episode_rewards) > 100 else self.episode_rewards
+        recent_rewards = rewards_np[-100:] if len(rewards_np) > 100 else rewards_np  # Use rewards_np
         axes[1, 1].plot(recent_rewards, alpha=0.7, color='orange')
         axes[1, 1].set_xlabel('Recent Episodes')
         axes[1, 1].set_ylabel('Reward')
@@ -484,6 +501,41 @@ class UniversalRLTrainer:
         # Log the plot
         self.logger.log_custom_plot('training_progress', fig, self.current_episode)
         plt.close()
+    
+
+def to_numpy(x):
+    """Convert tensor to numpy safely"""
+    if torch.is_tensor(x):
+        return x.detach().cpu().numpy()
+    elif isinstance(x, (list, tuple)):
+        return np.array([to_numpy(item) for item in x])
+    else:
+        return x
+
+def to_scalar(x):
+    """Convert tensor to scalar safely"""
+    if torch.is_tensor(x):
+        return x.item() if x.dim() == 0 else x.mean().item()
+    else:
+        return float(x)
+
+def tensor_stats(x):
+    """Get stats from tensor safely"""
+    if torch.is_tensor(x):
+        return {
+            'mean': x.mean().item(),
+            'std': x.std().item(),
+            'max': x.max().item(),
+            'min': x.min().item()
+        }
+    else:
+        x_np = np.array(x)
+        return {
+            'mean': np.mean(x_np),
+            'std': np.std(x_np),
+            'max': np.max(x_np),
+            'min': np.min(x_np)
+        }
 
 
 def main():

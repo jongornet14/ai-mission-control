@@ -242,25 +242,60 @@ class CrazyLogger:
         # Store plot info
         self.custom_plots[f'{name}_{step}'] = str(plot_path)
         
-    def log_video(self, frames, name="episode_video", fps=30):
-        """Log video of episode"""
+    def log_video(self, frames, name):
+        """Save video from frames and log to TensorBoard"""
         try:
             import imageio
-            
-            video_path = self.log_dir / 'videos' / f'{name}_episode_{self.current_episode}.mp4'
-            
-            # Convert frames to proper format
-            if isinstance(frames[0], torch.Tensor):
-                frames = [frame.cpu().numpy() for frame in frames]
-            
-            # Save video
-            imageio.mimsave(str(video_path), frames, fps=fps)
-            
-            print(f"📹 Video saved: {video_path}")
-            
         except ImportError:
-            print("⚠️  Install imageio to save videos: pip install imageio[ffmpeg]")
-    
+            print("❌ imageio not installed. Install with: pip install imageio[ffmpeg]")
+            return
+        
+        # Create videos directory
+        video_dir = self.log_dir / "videos"
+        video_dir.mkdir(exist_ok=True)
+        
+        # Create video filename
+        video_path = video_dir / f"{name}.mp4"
+        
+        try:
+            # Convert frames to proper numpy array format for TensorBoard
+            if frames and len(frames) > 0:
+                # Ensure frames are numpy arrays
+                frame_array = np.array(frames)
+                
+                # TensorBoard expects shape: (N, H, W, C) or (N, C, H, W)
+                # Most video frames are (H, W, C), so we need (N, H, W, C)
+                if len(frame_array.shape) == 4:  # Already (N, H, W, C)
+                    video_tensor = frame_array
+                else:
+                    video_tensor = frame_array
+                
+                # Convert to torch tensor and add to TensorBoard
+                import torch
+                video_tensor = torch.from_numpy(video_tensor).unsqueeze(0)  # Add batch dimension
+                
+                # Log to TensorBoard (expects shape: B, T, C, H, W)
+                if len(video_tensor.shape) == 5:  # (B, T, H, W, C)
+                    video_tensor = video_tensor.permute(0, 1, 4, 2, 3)  # (B, T, C, H, W)
+                
+                self.tb_writer.add_video(
+                    f'videos/{name}', 
+                    video_tensor, 
+                    global_step=self.current_episode,
+                    fps=30
+                )
+                
+                # Also save as MP4
+                imageio.mimsave(str(video_path), frames, fps=30)
+                
+                # Log video path to step data
+                self.log_step(video_path=str(video_path))
+                
+        except Exception as e:
+            print(f"❌ Video save failed: {e}")
+            import traceback
+            traceback.print_exc()
+        
     def get_system_metrics(self):
         """Get current system performance metrics"""
         try:

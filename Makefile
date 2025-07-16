@@ -116,9 +116,8 @@ run-rl-tests: ## Run universal_rl.py with CartPole PPO config and logging
 .PHONY: run-mujoco
 run-mujoco: ## Run MuJoCo experiment (usage: make run-mujoco CONFIG=halfcheetah)
 ifndef CONFIG
-	@echo "Usage: make run-mujoco CONFIG=halfcheetah|ant|walker2d|humanoid|manipulation|hyperopt_suite"
-	@exit 1
-endif
+	$(MAKE) run-mujoco CONFIG=halfcheetah
+else
 	docker run -it --rm \
 		--gpus all \
 		--name $(CONTAINER_NAME)-experiment \
@@ -126,10 +125,11 @@ endif
 		-v ai-mc-experiments:/workspace/experiments \
 		-v ai-mc-logs:/workspace/logs \
 		-v ai-mc-models:/workspace/models \
-		$(IMAGE_NAME) python3 /workspace/project/universal_rl.py \
-			--config /workspace/configs/mujoco/mujoco_$(CONFIG).yaml \
+		$(IMAGE_NAME) python3 /workspace/project/scripts/universal_rl.py \
+			--config /workspace/project/scripts/configs/mujoco/mujoco_$(CONFIG).yaml \
 			--logging.save_videos \
 			--logging.log_activations
+endif
 			
 # Utility commands
 .PHONY: test
