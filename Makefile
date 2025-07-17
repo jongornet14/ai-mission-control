@@ -7,7 +7,7 @@ CONTAINER_NAME = ai-mission-control
 PROJECT_DIR = $(shell pwd)
 
 # Default number of workers for distributed training (can be overridden)
-NUM_WORKERS ?= 4
+NUM_WORKERS ?= 12
 
 # Default target
 .PHONY: help
@@ -176,19 +176,68 @@ else
 	@echo "✅ MuJoCo experiment for $(CONFIG) finished."
 endif
 
+.PHONY: record-best-agent-video
+record-best-agent-video: ## Record videos of best agent for TensorBoard
+	@echo "🎥 Recording best agent videos for TensorBoard..."
+	docker run --rm --gpus all \
+		-v $(PROJECT_DIR):/workspace/project \
+		-v $(PROJECT_DIR)/distributed_shared:/workspace/distributed_shared \
+		-v $(PROJECT_DIR)/tensorboard_videos:/workspace/tensorboard_videos \
+		$(IMAGE_NAME) python /workspace/project/scripts/record_tensorboard_video.py \
+			--shared_dir /workspace/distributed_shared \
+			--tensorboard_dir /workspace/tensorboard_videos \
+			--env_name ${ENV:-CartPole-v1} \
+			--num_episodes 3
+	@echo "✅ Videos recorded! Start TensorBoard: tensorboard --logdir ./tensorboard_videos"
 
 ## Scalable Distributed Training Commands
 
 
 .PHONY: distributed-up
-distributed-up: ## Start distributed RL training with $(NUM_WORKERS) workers (default: 4)
+distributed-up: ## Start distributed RL training with $(NUM_WORKERS) workers
 	@echo "🚀 Starting distributed RL training with $(NUM_WORKERS) workers (ENV: ${ENV:-CartPole-v1})..."
+	@# Validation checks
+	@if [ ! -f "docker-compose.distributed.yml" ]; then \
+		echo "❌ Error: docker-compose.distributed.yml not found in current directory"; \
+		exit 1; \
+	fi
+	@if [ $(NUM_WORKERS) -lt 1 ] || [ $(NUM_WORKERS) -gt 12 ]; then \
+		echo "❌ Error: NUM_WORKERS must be between 1 and 12 (requested: $(NUM_WORKERS))"; \
+		exit 1; \
+	fi
+	@# Check if containers are already running
+	@if docker ps --format "{{.Names}}" | grep -q "^distributed_"; then \
+		echo "⚠️  Warning: Distributed containers already running:"; \
+		docker ps --filter "name=distributed_" --format "  {{.Names}} ({{.Status}})"; \
+		echo "💡 Use 'make distributed-down' first, or 'make distributed-scale WORKERS=$(NUM_WORKERS)' to change worker count"; \
+		exit 1; \
+	fi
+	@# Create shared directory
 	@mkdir -p distributed_shared logs
-	ENV=${ENV:-CartPole-v1} docker-compose -f docker-compose.distributed.yml up -d --scale worker=$(NUM_WORKERS)
-	@echo "✅ Distributed training started!"
-	@echo "📊 Monitor with: make distributed-logs"
-	@echo "📈 TensorBoard: make distributed-tensorboard"
-	@echo "🎯 Dashboard (if configured): http://localhost:8081"
+	@# Build services list dynamically
+	@echo "📋 Building services list for $(NUM_WORKERS) workers..."
+	@SERVICES="coordinator tensorboard-distributed"; \
+	for i in $$(seq 0 $$(($(NUM_WORKERS) - 1))); do \
+		SERVICES="$$SERVICES worker-$$i"; \
+	done; \
+	echo "🎯 Starting services: $$SERVICES"; \
+	if ENV=${ENV:-CartPole-v1} docker-compose -f docker-compose.distributed.yml up -d $$SERVICES; then \
+		echo "✅ Distributed training started successfully!"; \
+		sleep 3; \
+		echo "📊 Container status:"; \
+		docker ps --filter "name=distributed_" --format "table {{.Names}}\t{{.Status}}"; \
+		echo ""; \
+		echo "🔗 Quick access:"; \
+		echo "  📊 Monitor: make distributed-status"; \
+		echo "  📋 Logs: make distributed-logs"; \
+		echo "  📈 TensorBoard: make distributed-tensorboard"; \
+		echo "  🐚 Shell: make distributed-shell-any-worker"; \
+	else \
+		echo "❌ Failed to start distributed training"; \
+		echo "🔍 Checking what went wrong..."; \
+		docker-compose -f docker-compose.distributed.yml logs --tail=10; \
+		exit 1; \
+	fi
 
 .PHONY: distributed-scale
 distributed-scale: ## Scale distributed workers (usage: make distributed-scale WORKERS=6)
@@ -308,9 +357,12 @@ endif
 
 .PHONY: distributed-shell-coordinator
 distributed-shell-coordinator: ## Open shell in coordinator container
+	@if ! docker ps --format "{{.Names}}" | grep -q "^distributed_coordinator$$"; then \
+		echo "❌ Coordinator container not running. Start with 'make distributed-up'"; \
+		exit 1; \
+	fi
 	@echo "🐚 Entering coordinator container..."
 	docker exec -it distributed_coordinator /bin/bash
-	@echo "✅ Exited coordinator shell."
 
 .PHONY: distributed-shell-worker
 distributed-shell-worker: ## Open shell in a specific worker container (usage: WORKER=1 make distributed-shell-worker)
@@ -700,3 +752,9 @@ except Exception as e: \
     print(f'❌ Failed to create CartPole-v1 environment: {e}'); \
     import sys; sys.exit(1);"
 	@echo "✅ Quick test completed."
+
+.PHONY: distributed-health-check
+distributed-health-check: ## Run comprehensive worker health check
+	@echo "🏥 Running distributed worker health check..."
+	@chmod +x worker_health_check.sh
+	@./worker_health_check.sh

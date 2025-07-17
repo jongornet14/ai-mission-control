@@ -35,7 +35,7 @@ training:
 logging:
   save_models: true
   save_videos: false
-  save_eval_videos: true
+  save_eval_videos: false
   eval_video_frequency: 100  # Every 100 episodes
   log_activations: false
   activation_frequency: 100

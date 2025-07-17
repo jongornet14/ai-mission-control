@@ -17,7 +17,7 @@ class TorchGymWrapper:
         self.device = device
         
     def reset(self):
-        obs = self.env.reset()
+        obs, _ = self.env.reset() # Gym environments now return (obs, info) for reset()
         return torch.FloatTensor(obs).to(self.device)
     
     def step(self, action):
@@ -28,18 +28,18 @@ class TorchGymWrapper:
             else:  # array
                 action = action.cpu().numpy()
                 
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, done, truncated, info = self.env.step(action) # Added 'truncated'
         
         return (
             torch.FloatTensor(obs).to(self.device),
             torch.tensor(reward, dtype=torch.float32, device=self.device),
-            torch.tensor(done, dtype=torch.float32, device=self.device),  # float for GAE
+            torch.tensor(done or truncated, dtype=torch.float32, device=self.device),  # Use 'done or truncated' for episode end
             info
         )
         
     def render(self, mode='rgb_array'):
         """Pass through render call to underlying environment"""
-        return self.env.render()
+        return self.env.render(mode=mode) # Pass mode to underlying env
     
     @property
     def action_space(self):
@@ -55,7 +55,7 @@ class TorchGymWrapper:
 class GymEnvironmentWrapper:
     """Simple wrapper for OpenAI Gym environments"""
     
-    def __init__(self, env_name, device=None, frame_skip=1, normalize_observations=True, max_episode_steps=None):
+    def __init__(self, env_name, device=None, frame_skip=1, normalize_observations=True, max_episode_steps=None, render_mode=None):
     
         """Initialize Gym environment wrapper
         
@@ -65,6 +65,7 @@ class GymEnvironmentWrapper:
             frame_skip (int): Frame skipping factor  
             normalize_observations (bool): Whether to normalize observations
             max_episode_steps (int): Maximum episode steps
+            render_mode (str, optional): Gym render mode ('human', 'rgb_array', 'none'). Defaults to None.
         """
         self.env_name = env_name
         self.frame_skip = frame_skip
@@ -74,28 +75,38 @@ class GymEnvironmentWrapper:
         self.obs_std = None
 
         self.device = device if device is not None else 'cpu'  # Store device
+        self.render_mode = render_mode # Store render_mode
         
     def create(self):
         """Create and configure the environment"""
 
-        if 'mujoco' in self.env_name.lower() or any(x in self.env_name for x in ['Ant', 'HalfCheetah', 'Hopper', 'Humanoid', 'InvertedPendulum', 'InvertedDoublePendulum', 'Reacher', 'Swimmer', 'Walker']):
-            env = gym.make(self.env_name, render_mode='rgb_array')
-        else:
-            env = gym.make(self.env_name, render_mode='rgb_array')
+        # Use the render_mode from init, passed directly to gym.make
+        # For headless training, render_mode=None should be used.
+        # For video recording, render_mode='rgb_array' (with Xvfb if MuJoCo)
+        env = gym.make(self.env_name, render_mode=self.render_mode)
         
-        # MuJoCo specific: Force render initialization
-        if hasattr(env, 'mujoco_renderer'):
-            try:
-                # Try to initialize renderer
-                env.reset()
-                _ = env.render()
-            except:
-                pass
+        # MuJoCo specific: Force render initialization - REMOVED FOR HEADLESS OPERATION
+        # This block was causing the Xvfb errors in headless workers.
+        # It's only needed if you specifically want to force a render test on startup.
+        # For training, it's generally not needed.
+        # If hasattr(env, 'mujoco_renderer'):
+        #     try:
+        #         env.reset()
+        #         _ = env.render() 
+        #     except:
+        #         pass
         
         # Set max episode steps if specified
         if self.max_episode_steps is not None:
-            env._max_episode_steps = self.max_episode_steps
-            
+            # Note: For Gym >= 0.26, gym.make automatically handles max_episode_steps via EnvSpec
+            # If your gym version is older, this might still be necessary.
+            if not hasattr(env.spec, 'max_episode_steps') or env.spec.max_episode_steps is None:
+                env._max_episode_steps = self.max_episode_steps
+            elif self.max_episode_steps < env.spec.max_episode_steps:
+                print(f"Warning: Custom max_episode_steps ({self.max_episode_steps}) is less than environment's default ({env.spec.max_episode_steps}). Using custom.")
+                env._max_episode_steps = self.max_episode_steps
+
+
         # Initialize observation normalization if needed
         if self.normalize_observations:
             self._init_obs_normalization(env)
@@ -103,7 +114,7 @@ class GymEnvironmentWrapper:
         # Wrap environment with our simple wrapper
         wrapped_env = SimpleGymWrapper(env, self)
         
-        # ADD THIS: Wrap with torch conversion
+        # Wrap with torch conversion
         torch_env = TorchGymWrapper(wrapped_env, self.device)
         
         return torch_env
@@ -114,14 +125,14 @@ class GymEnvironmentWrapper:
         obs_samples = []
         
         for _ in range(100):  # Sample 100 episodes for statistics
-            obs, _ = env.reset()
+            obs, _ = env.reset() # Gym environments now return (obs, info) for reset()
             obs_samples.append(obs)
             
             for _ in range(100):  # Max 100 steps per episode
                 action = env.action_space.sample()
-                obs, _, done, _, _ = env.step(action)
+                obs, _, done, truncated, _, _ = env.step(action) # Added 'truncated', removed 'info'
                 obs_samples.append(obs)
-                if done:
+                if done or truncated: # Use 'done or truncated' for episode end
                     break
 
         obs_samples = np.array(obs_samples)
@@ -139,20 +150,20 @@ class SimpleGymWrapper:
         self.config = wrapper_config
         
     def reset(self):
-        obs,_ = self.env.reset()
+        obs, _ = self.env.reset() # Gym environments now return (obs, info) for reset()
         if self.config.normalize_observations and self.config.obs_mean is not None:
             obs = (obs - self.config.obs_mean) / self.config.obs_std
         return obs
         
     def step(self, action):
-        obs, reward, done, info, _ = self.env.step(action)
+        obs, reward, done, truncated, info = self.env.step(action) # Added 'truncated'
         if self.config.normalize_observations and self.config.obs_mean is not None:
             obs = (obs - self.config.obs_mean) / self.config.obs_std
-        return obs, reward, done, info
+        return obs, reward, (done or truncated), info # Use 'done or truncated' for episode end
         
     def render(self, mode='rgb_array'):
         """Pass through render call to underlying environment"""
-        return self.env.render()
+        return self.env.render(mode=mode) # Pass mode to underlying env
         
     @property
     def action_space(self):
@@ -179,7 +190,8 @@ def get_environment_info(env_name):
     """Get information about a specific environment"""
     try:
         import gym
-        env = gym.make(self.env_name, render_mode='rgb_array')  # ADD render_mode here
+        # Use render_mode='rgb_array' as this function might implicitly make one for introspection
+        env = gym.make(env_name, render_mode='rgb_array')
         info = {
             'observation_space': env.observation_space,
             'action_space': env.action_space,

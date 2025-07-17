@@ -4,5 +4,5 @@ NOTE: Using experimental fast data loading logic. To disable, pass
     "--load_fast=false" and report issues on GitHub. More details:
     https://github.com/tensorflow/tensorboard/issues/4784
 
-E0716 18:54:05.818710 127680272271168 program.py:300] TensorBoard could not bind to port 6007, it was already in use
-ERROR: TensorBoard could not bind to port 6007, it was already in use
+TensorBoard 2.18.0 at http://0.0.0.0:6007/ (Press CTRL+C to quit)
+TensorBoard caught SIGTERM; exiting...

@@ -37,6 +37,7 @@ class UniversalRLTrainer:
         self.setup_experiment_dir()
         
         # Initialize CRAZY LOGGER! 🚀
+        # Ensure logger is initialized after config and exp_dir setup
         self.logger = CrazyLogger(
             log_dir=self.exp_dir,
             experiment_name=self.config['experiment']['name']
@@ -56,13 +57,68 @@ class UniversalRLTrainer:
         self.episode_lengths = []
         
     def load_config(self, config_path=None, **kwargs):
-        """Load configuration from YAML file and merge with kwargs"""
-        if config_path and os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                config = yaml.safe_load(f)
-        else:
-            config = self.get_default_config()
+        """Load configuration from YAML file or default, then merge with kwargs."""
+        config = {} # Initialize config
+        found_config_file = False
         
+        # Try to load from provided config_path
+        if config_path and os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
+                    config = yaml.safe_load(f)
+                found_config_file = True
+                print(f"✅ Loaded configuration from: {config_path}")
+            except Exception as e:
+                print(f"❌ Error loading config from {config_path}: {e}. Attempting to load default config.")
+        elif config_path: # config_path was provided but didn't exist
+            print(f"⚠️ Provided config file does not exist: {config_path}. Attempting to load default config.")
+
+        # If not loaded from provided path, try default config
+        if not found_config_file:
+            default_config_path = Path(__file__).parent.parent / 'scripts' / 'configs' / 'mujoco' / 'mujoco_halfcheetah.yaml'
+            if default_config_path.exists():
+                try:
+                    with open(default_config_path, 'r') as f:
+                        config = yaml.safe_load(f)
+                    found_config_file = True
+                    print(f"✅ Loaded default configuration from: {default_config_path}")
+                except Exception as e:
+                    print(f"❌ Error loading default config from {default_config_path}: {e}.")
+            else:
+                print(f"❌ Default configuration file not found: {default_config_path}")
+
+
+        # If still no config, raise an error
+        if not found_config_file:
+            description = "Configuration file"
+            # Decide which path to show in the error message
+            if config_path:
+                display_path_for_error = Path(config_path)
+            else:
+                display_path_for_error = Path(__file__).parent.parent / 'scripts' / 'configs' / 'mujoco' / 'mujoco_halfcheetah.yaml'
+                description = "Default configuration file" # Be more specific
+
+            error_msg = f"❌ {description} not found: {display_path_for_error}"
+        
+            current_dir = Path.cwd()
+            print(f"❌ {error_msg}")
+            print(f"📍 Current directory: {current_dir}")
+            print(f"📁 Directory contents: {list(current_dir.iterdir())}")
+            
+            # Use 'display_path_for_error' here
+            if display_path_for_error.parent != current_dir:
+                print(f"📁 Parent directory {display_path_for_error.parent} contents: {list(display_path_for_error.parent.iterdir()) if display_path_for_error.parent.exists() else 'Directory does not exist'}")
+            
+            # Log to your logger if available (logger might not be initialized yet if this is the first error)
+            if hasattr(self, 'logger'): 
+                self.logger.log_step(
+                    error="ConfigFileNotFound", 
+                    file_path=str(display_path_for_error),
+                    current_dir=str(current_dir),
+                    description=description
+                )
+            raise FileNotFoundError(error_msg)
+            
         # Override with command line arguments
         for key, value in kwargs.items():
             if value is not None:
@@ -70,31 +126,6 @@ class UniversalRLTrainer:
         
         return config
     
-    def get_default_config(self):
-        """Default configuration"""
-        error_msg = f"❌ {description} not found: {file_path}"
-    
-        # Log current directory and nearby files for debugging
-        current_dir = Path.cwd()
-        print(f"❌ {error_msg}")
-        print(f"📍 Current directory: {current_dir}")
-        print(f"📁 Directory contents: {list(current_dir.iterdir())}")
-        
-        # If it's in a subdirectory, check parent directory
-        if path.parent != current_dir:
-            print(f"📁 Parent directory {path.parent} contents: {list(path.parent.iterdir()) if path.parent.exists() else 'Directory does not exist'}")
-        
-        # Log to your logger if available
-        if hasattr(self, 'logger'):
-            self.logger.log_step(
-                error="FileNotFound", 
-                file_path=str(file_path),
-                current_dir=str(current_dir),
-                description=description
-            )
-        
-        raise FileNotFoundError(error_msg)
-
     def set_nested_config(self, config, key, value):
         """Set nested configuration value using dot notation"""
         keys = key.split('.')
@@ -279,6 +310,8 @@ class UniversalRLTrainer:
         should_record = (self.config['logging'].get('save_eval_videos', False) and 
                         self.current_episode % self.config['logging'].get('eval_video_frequency', 100) == 0)
         
+        eval_success_rate = 0 # Initialize for the success rate calculation
+        
         for eval_ep in range(self.config['training']['eval_episodes']):
             obs = self.env.reset()
             eval_reward = 0
@@ -331,6 +364,7 @@ class UniversalRLTrainer:
             'eval_length_mean': np.mean(eval_lengths),
             'eval_length_std': np.std(eval_lengths),
             'evaluation_time': evaluation_time,
+            'eval_success_rate': eval_success_rate / self.config['training']['eval_episodes'] if self.config['training']['eval_episodes'] > 0 else 0 # Add success rate
         }
         
         return eval_metrics
@@ -565,7 +599,7 @@ def main():
     args = parser.parse_args()
     
     # Convert args to kwargs, filtering None values
-    kwargs = {k: v for k, v in vars(args).items() if v is not None and k != 'config'}
+    kwargs = {k: v for k, v in vars(args).items() if v is not None and k != 'config'}\
     
     # Create and run trainer
     trainer = UniversalRLTrainer(config_path=args.config, **kwargs)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Enhanced Distributed RL Worker Script
-Real RL training with comprehensive CrazyLogger integration
+Clean OOP design with all training logic in the DistributedWorker class
 """
 
 import torch
@@ -28,7 +28,7 @@ class DistributedWorker:
         Enhanced Distributed RL Worker with CrazyLogger
         
         Args:
-            worker_id: Unique worker identifier (0, 1, 2, 3)
+            worker_id: Unique worker identifier (0-19)
             shared_dir: Directory for shared model files
             max_episodes: Episodes to train before checkpoint
             sync_interval: Episodes between checking for model updates
@@ -491,12 +491,137 @@ class DistributedWorker:
                 'min': np.min(x_np)
             }
 
+    def run(self, args):
+        """
+        Main training loop - all distributed RL training logic
+        This is the ONLY run method that does actual training
+        """
+        print(f"🚀 Worker {self.worker_id}: Starting REAL RL training with CrazyLogger")
+        
+        # Setup RL components
+        self.setup_rl_components(
+            env_name=args.env,
+            device=args.device,
+            lr=args.lr
+        )
+        
+        try:
+            from tqdm import tqdm
+            pbar = tqdm(range(args.max_episodes), desc=f"Worker {self.worker_id}")
+            
+            for episode in pbar:
+                if self.should_terminate():
+                    break
+                
+                # Collect episode with full logging
+                episode_data, episode_reward, episode_length, collection_time, step_times = self.collect_episode()
+                
+                # Train on episode
+                train_metrics = self.train_on_episode(episode_data)
+                
+                # Store episode stats
+                self.episode_rewards.append(episode_reward)
+                self.episode_lengths.append(episode_length)
+                self.total_episodes += 1
+                
+                # Update progress bar
+                pbar.set_postfix({
+                    'Reward': f'{episode_reward:.2f}',
+                    'Length': episode_length,
+                    'Trend': f'{self.calculate_reward_change():.3f}'
+                })
+                
+                # Comprehensive episode logging
+                episode_metrics = {
+                    'episode_reward': episode_reward,
+                    'episode_length': episode_length,
+                    'episode_collection_time': collection_time,
+                    'avg_step_time': np.mean(step_times) if step_times else 0,
+                    'total_episodes': self.total_episodes,
+                    'worker_id': self.worker_id,
+                    'reward_change': self.calculate_reward_change(),
+                    'avg_reward_last_100': np.mean(self.episode_rewards[-100:]) if len(self.episode_rewards) >= 100 else np.mean(self.episode_rewards),
+                    'distributed_training': True,
+                    'sync_due': self.should_sync()
+                }
+                
+                # Combine episode and training metrics
+                all_metrics = {**episode_metrics, **train_metrics}
+                
+                # Add performance tracker stats
+                perf_stats = self.logger.performance_tracker.get_stats()
+                all_metrics.update(perf_stats)
+                
+                # Log complete episode
+                self.logger.log_episode(**all_metrics)
+                
+                # Check for model updates periodically
+                if self.should_sync():
+                    if self.check_for_model_update():
+                        if self.load_best_model():
+                            print(f"🔄 Worker {self.worker_id}: Loaded updated model from coordinator")
+                
+                # Save checkpoint periodically
+                if self.total_episodes % 25 == 0:
+                    self.save_checkpoint()
+                    self.create_distributed_analysis_plots()
+                    print(f"📊 Worker {self.worker_id}: Created analysis plots at episode {self.total_episodes}")
+                
+                # Progress update
+                if self.total_episodes % 10 == 0:
+                    avg_reward = np.mean(self.episode_rewards[-10:])
+                    print(f"📈 Worker {self.worker_id}: Episode {self.total_episodes}, Avg Reward (last 10): {avg_reward:.4f}")
+                    
+            pbar.close()
+            
+        except KeyboardInterrupt:
+            print(f"🛑 Worker {self.worker_id}: Training interrupted")
+        except Exception as e:
+            print(f"💥 Worker {self.worker_id}: Error during training: {e}")
+            self.logger.log_step(error=str(e), error_type="training_exception")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Final analysis and cleanup
+            self.create_distributed_analysis_plots()
+            self.save_checkpoint()
+            
+            # Generate final report
+            final_summary = self.logger.generate_final_report()
+            print(f"📊 Worker {self.worker_id}: Final report generated")
+            
+            # Close logger
+            self.logger.close()
+            
+            print(f"✅ Worker {self.worker_id}: Training completed - Total episodes: {self.total_episodes}")
+            if self.episode_rewards:
+                print(f"🏆 Worker {self.worker_id}: Best reward: {max(self.episode_rewards):.2f}")
+                print(f"📈 Worker {self.worker_id}: Final average: {np.mean(self.episode_rewards[-10:]):.2f}")
 
-def distributed_training_worker(args):
-    """
-    Main worker training function with real RL training and comprehensive logging
-    """
-    # Initialize worker
+
+def main():
+    """Simplified main entry point - clean single responsibility"""
+    parser = argparse.ArgumentParser(description='Enhanced Distributed RL Worker')
+    
+    # Worker-specific args
+    parser.add_argument('--worker_id', type=int, required=True, help='Worker ID (0-19)')
+    parser.add_argument('--shared_dir', type=str, required=True, help='Shared directory')
+    parser.add_argument('--max_episodes', type=int, default=100, help='Episodes per checkpoint')
+    parser.add_argument('--sync_interval', type=int, default=10, help='Episodes between syncs')
+    parser.add_argument('--timeout_minutes', type=int, default=30, help='Max minutes before sync')
+    
+    # RL training args
+    parser.add_argument('--env', type=str, default='CartPole-v1', help='Environment name')
+    parser.add_argument('--device', type=str, default='cuda:0', help='Device to use')
+    parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
+    
+    args = parser.parse_args()
+    
+    # Validate worker_id
+    if args.worker_id < 0 or args.worker_id >= 20:
+        raise ValueError("worker_id must be between 0 and 19")
+    
+    # Create worker and run training
     worker = DistributedWorker(
         worker_id=args.worker_id,
         shared_dir=args.shared_dir,
@@ -505,138 +630,8 @@ def distributed_training_worker(args):
         timeout_minutes=args.timeout_minutes
     )
     
-    # Setup RL components
-    worker.setup_rl_components(
-        env_name=args.env,
-        device=args.device,
-        lr=args.lr
-    )
-    
-    print(f"🚀 Worker {args.worker_id}: Starting REAL RL training with CrazyLogger")
-    
-    try:
-        from tqdm import tqdm
-        pbar = tqdm(range(args.max_episodes), desc=f"Worker {args.worker_id}")
-        
-        for episode in pbar:
-            if worker.should_terminate():
-                break
-            
-            # Collect episode with full logging
-            episode_data, episode_reward, episode_length, collection_time, step_times = worker.collect_episode()
-            
-            # Train on episode
-            train_metrics = worker.train_on_episode(episode_data)
-            
-            # Store episode stats
-            worker.episode_rewards.append(episode_reward)
-            worker.episode_lengths.append(episode_length)
-            worker.total_episodes += 1
-            
-            # Update progress bar
-            pbar.set_postfix({
-                'Reward': f'{episode_reward:.2f}',
-                'Length': episode_length,
-                'Trend': f'{worker.calculate_reward_change():.3f}'
-            })
-            
-            # Comprehensive episode logging
-            episode_metrics = {
-                'episode_reward': episode_reward,
-                'episode_length': episode_length,
-                'episode_collection_time': collection_time,
-                'avg_step_time': np.mean(step_times) if step_times else 0,
-                'total_episodes': worker.total_episodes,
-                'worker_id': worker.worker_id,
-                'reward_change': worker.calculate_reward_change(),
-                'avg_reward_last_100': np.mean(worker.episode_rewards[-100:]) if len(worker.episode_rewards) >= 100 else np.mean(worker.episode_rewards),
-                'distributed_training': True,
-                'sync_due': worker.should_sync()
-            }
-            
-            # Combine episode and training metrics
-            all_metrics = {**episode_metrics, **train_metrics}
-            
-            # Add performance tracker stats
-            perf_stats = worker.logger.performance_tracker.get_stats()
-            all_metrics.update(perf_stats)
-            
-            # Log complete episode
-            worker.logger.log_episode(**all_metrics)
-            
-            # Check for model updates periodically
-            if worker.should_sync():
-                if worker.check_for_model_update():
-                    if worker.load_best_model():
-                        print(f"🔄 Worker {args.worker_id}: Loaded updated model from coordinator")
-            
-            # Save checkpoint periodically
-            if worker.total_episodes % 25 == 0:
-                worker.save_checkpoint()
-                worker.create_distributed_analysis_plots()
-                print(f"📊 Worker {args.worker_id}: Created analysis plots at episode {worker.total_episodes}")
-            
-            # Progress update
-            if worker.total_episodes % 10 == 0:
-                avg_reward = np.mean(worker.episode_rewards[-10:])
-                print(f"📈 Worker {args.worker_id}: Episode {worker.total_episodes}, Avg Reward (last 10): {avg_reward:.4f}")
-                
-        pbar.close()
-        
-    except KeyboardInterrupt:
-        print(f"🛑 Worker {args.worker_id}: Training interrupted")
-    except Exception as e:
-        print(f"💥 Worker {args.worker_id}: Error during training: {e}")
-        worker.logger.log_step(error=str(e), error_type="training_exception")
-        import traceback
-        traceback.print_exc()
-    finally:
-        # Final analysis and cleanup
-        worker.create_distributed_analysis_plots()
-        worker.save_checkpoint()
-        
-        # Generate final report
-        final_summary = worker.logger.generate_final_report()
-        print(f"📊 Worker {args.worker_id}: Final report generated")
-        
-        # Close logger
-        worker.logger.close()
-        
-        print(f"✅ Worker {args.worker_id}: Training completed - Total episodes: {worker.total_episodes}")
-        if worker.episode_rewards:
-            print(f"🏆 Worker {args.worker_id}: Best reward: {max(worker.episode_rewards):.2f}")
-            print(f"📈 Worker {args.worker_id}: Final average: {np.mean(worker.episode_rewards[-10:]):.2f}")
-
-
-def main():
-    """Main entry point"""
-    parser = argparse.ArgumentParser(description='Enhanced Distributed RL Worker')
-    
-    # Worker-specific args
-    parser.add_argument('--worker_id', type=int, required=True, help='Worker ID (0, 1, 2, 3)')
-    parser.add_argument('--shared_dir', type=str, required=True, help='Shared directory for model exchange')
-    parser.add_argument('--max_episodes', type=int, default=100, help='Episodes per checkpoint')
-    parser.add_argument('--sync_interval', type=int, default=10, help='Episodes between sync checks')
-    parser.add_argument('--timeout_minutes', type=int, default=30, help='Max minutes before forced sync')
-    
-    # RL training args
-    parser.add_argument('--env', type=str, default='CartPole-v1', help='Environment name')
-    parser.add_argument('--device', type=str, default='cuda:0', help='Device to use')
-    parser.add_argument('--lr', type=float, default=3e-4, help='Learning rate')
-    parser.add_argument('--frames_per_batch', type=int, default=1000, help='Frames per batch')
-    parser.add_argument('--total_frames', type=int, default=1000000, help='Total training frames')
-    parser.add_argument('--num_epochs', type=int, default=10, help='Number of epochs')
-    parser.add_argument('--sub_batch_size', type=int, default=64, help='Sub-batch size')
-    parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Max gradient norm')
-    
-    args = parser.parse_args()
-    
-    MAX_WORKERS = 20  # Set a reasonable upper limit
-    if args.worker_id < 0 or args.worker_id >= MAX_WORKERS:
-        raise ValueError(f"worker_id must be between 0 and {MAX_WORKERS-1}")
-    
-    # Start enhanced distributed training
-    distributed_training_worker(args)
+    # Single, clean call to run training
+    worker.run(args)
 
 
 if __name__ == "__main__":

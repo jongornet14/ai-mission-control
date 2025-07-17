@@ -1,5 +1,4 @@
 services:
-  # Coordinator service
   coordinator:
     build:
       context: .
@@ -16,11 +15,51 @@ services:
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      python distributed_coordinator.py
+      python scripts/distributed_coordinator.py
       --shared_dir /workspace/distributed_shared
       --num_workers ${NUM_WORKERS:-4}
       --check_interval 30
       --min_episodes 50
+    # Note: depends_on should not point to itself 'coordinator'
+    # It should depend on services it needs to start *before* it.
+    # If coordinator has no pre-requisite services, remove this line or
+    # list actual dependencies like a database if you add one.
+    # depends_on:
+    #   - some_database_service
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 0 (MOVED TO HERE)
+  worker-0:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python scripts/distributed_worker.py
+      --worker_id 0
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+
+    networks:
+      - rl-training
     depends_on:
       - coordinator
     restart: unless-stopped
@@ -32,7 +71,223 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 7
+  # Worker 1 (MOVED TO HERE)
+  worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python scripts/distributed_worker.py
+      --worker_id 1
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 2 (MOVED TO HERE)
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python scripts/distributed_worker.py
+      --worker_id 2
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 3 (MOVED TO HERE)
+  worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python scripts/distributed_worker.py
+      --worker_id 3
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 4 (MOVED TO HERE)
+  worker-4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python scripts/distributed_worker.py
+      --worker_id 4
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 5 (MOVED TO HERE)
+  worker-5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python scripts/distributed_worker.py
+      --worker_id 5
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 6 (MOVED TO HERE)
+  worker-6:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python scripts/distributed_worker.py
+      --worker_id 6
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 7 (already correctly placed)
   worker-7:
     build:
       context: .
@@ -41,6 +296,8 @@ services:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -48,15 +305,11 @@ services:
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      python distributed_worker.py
+      python scripts/distributed_worker.py
       --worker_id 7
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
+
     networks:
       - rl-training
     depends_on:
@@ -70,7 +323,7 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 8
+  # Worker 8 (already correctly placed)
   worker-8:
     build:
       context: .
@@ -79,6 +332,8 @@ services:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -86,15 +341,11 @@ services:
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      python distributed_worker.py
+      python scripts/distributed_worker.py
       --worker_id 8
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
+
     networks:
       - rl-training
     depends_on:
@@ -108,7 +359,7 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 9
+  # Worker 9 (already correctly placed)
   worker-9:
     build:
       context: .
@@ -117,6 +368,8 @@ services:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -124,15 +377,11 @@ services:
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      python distributed_worker.py
+      python scripts/distributed_worker.py
       --worker_id 9
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
+
     networks:
       - rl-training
     depends_on:
@@ -146,7 +395,7 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 10
+  # Worker 10 (already correctly placed)
   worker-10:
     build:
       context: .
@@ -155,6 +404,8 @@ services:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -162,15 +413,11 @@ services:
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      python distributed_worker.py
+      python scripts/distributed_worker.py
       --worker_id 10
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
+
     networks:
       - rl-training
     depends_on:
@@ -184,7 +431,7 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 11
+  # Worker 11 (already correctly placed)
   worker-11:
     build:
       context: .
@@ -193,6 +440,8 @@ services:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -200,15 +449,11 @@ services:
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      python distributed_worker.py
+      python scripts/distributed_worker.py
       --worker_id 11
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
+
     networks:
       - rl-training
     depends_on:
@@ -222,7 +467,7 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # TensorBoard for distributed training
+  # TensorBoard for distributed training (already correctly placed)
   tensorboard-distributed:
     build:
       context: .
@@ -262,260 +507,5 @@ networks:
 volumes:
   distributed_shared:
     driver: local
-    restart: unless-stopped
-
-  # Worker 0
-  worker-0:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
-    volumes:
-      - ./distributed_shared:/workspace/distributed_shared
-      - ./configs:/workspace/configs
-      - ./logs:/workspace/logs
-      - .:/workspace/project
-    working_dir: /workspace/project
-    command: >
-      python distributed_worker.py
-      --worker_id 0
-      --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
-    networks:
-      - rl-training
-    depends_on:
-      - coordinator
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-
-  # Worker 1
-  worker-1:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
-    volumes:
-      - ./distributed_shared:/workspace/distributed_shared
-      - ./configs:/workspace/configs
-      - ./logs:/workspace/logs
-      - .:/workspace/project
-    working_dir: /workspace/project
-    command: >
-      python distributed_worker.py
-      --worker_id 1
-      --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
-    networks:
-      - rl-training
-    depends_on:
-      - coordinator
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-
-  # Worker 2
-  worker-2:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
-    volumes:
-      - ./distributed_shared:/workspace/distributed_shared
-      - ./configs:/workspace/configs
-      - ./logs:/workspace/logs
-      - .:/workspace/project
-    working_dir: /workspace/project
-    command: >
-      python distributed_worker.py
-      --worker_id 2
-      --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
-    networks:
-      - rl-training
-    depends_on:
-      - coordinator
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-
-  # Worker 3
-  worker-3:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
-    volumes:
-      - ./distributed_shared:/workspace/distributed_shared
-      - ./configs:/workspace/configs
-      - ./logs:/workspace/logs
-      - .:/workspace/project
-    working_dir: /workspace/project
-    command: >
-      python distributed_worker.py
-      --worker_id 3
-      --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
-    networks:
-      - rl-training
-    depends_on:
-      - coordinator
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-
-  # Worker 4
-  worker-4:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
-    volumes:
-      - ./distributed_shared:/workspace/distributed_shared
-      - ./configs:/workspace/configs
-      - ./logs:/workspace/logs
-      - .:/workspace/project
-    working_dir: /workspace/project
-    command: >
-      python distributed_worker.py
-      --worker_id 4
-      --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
-    networks:
-      - rl-training
-    depends_on:
-      - coordinator
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-
-  # Worker 5
-  worker-5:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
-    volumes:
-      - ./distributed_shared:/workspace/distributed_shared
-      - ./configs:/workspace/configs
-      - ./logs:/workspace/logs
-      - .:/workspace/project
-    working_dir: /workspace/project
-    command: >
-      python distributed_worker.py
-      --worker_id 5
-      --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
-    networks:
-      - rl-training
-    depends_on:
-      - coordinator
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-
-  # Worker 6
-  worker-6:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
-    volumes:
-      - ./distributed_shared:/workspace/distributed_shared
-      - ./configs:/workspace/configs
-      - ./logs:/workspace/logs
-      - .:/workspace/project
-    working_dir: /workspace/project
-    command: >
-      python distributed_worker.py
-      --worker_id 6
-      --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0
-      --max_episodes 200
-      --lr 3e-4
-      --sync_interval 10
-      --timeout_minutes 30
-    networks:
-      - rl-training
+    # Remove 'restart: unless-stopped' from here. Volumes don't restart.
+    # restart: unless-stopped

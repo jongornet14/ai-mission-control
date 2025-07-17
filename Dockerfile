@@ -24,6 +24,7 @@ ENV CUDA_VISIBLE_DEVICES=0
 RUN apt-get update && apt-get install -y \
     wget \
     curl \
+    ffmpeg \
     git \
     build-essential \
     pkg-config \
@@ -54,7 +55,7 @@ RUN apt-get update && apt-get install -y \
     libxi6 \
     libxtst6 \
     unzip \
-    xvfb \
+    x11-utils \
     x11vnc \
     fluxbox \
     wmctrl \
@@ -86,6 +87,7 @@ ENV PATH="/opt/miniforge/envs/automl/bin:$PATH"
 
 # Set up workspace directory
 WORKDIR /workspace
+COPY . /workspace/project/
 
 # Create directory structure for experiments
 RUN /bin/bash -c "mkdir -p /workspace/{experiments,logs,models,data,configs,scripts,notebooks}"
@@ -94,16 +96,6 @@ RUN /bin/bash -c "mkdir -p /workspace/{experiments,logs,models,data,configs,scri
 # COPY rl_tests.py /workspace/scripts/
 # COPY hyper_framework.py /workspace/scripts/
 # COPY hyper_optimizers.py /workspace/scripts/
-
-# Set up display for Unity (headless mode)
-ENV DISPLAY=:99
-
-# Create startup script for X11 forwarding
-RUN echo '#!/bin/bash\n\
-Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &\n\
-export DISPLAY=:99\n\
-exec "$@"' > /usr/local/bin/entrypoint.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh
 
 # Install additional CUDA libraries for optimal GPU performance
 RUN /opt/miniforge/envs/automl/bin/pip install --no-cache-dir \
@@ -150,7 +142,7 @@ EXPOSE 8080 8888 6006
 RUN echo "source /opt/miniforge/etc/profile.d/conda.sh && conda activate automl" >> /root/.bashrc
 
 # Default entrypoint
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "-c"]
 
 # Default command
 CMD ["/bin/bash"]
