@@ -1,0 +1,521 @@
+services:
+  # Coordinator service
+  coordinator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-coordinator
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=""
+      - NUM_WORKERS=${NUM_WORKERS:-4}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_coordinator.py
+      --shared_dir /workspace/distributed_shared
+      --num_workers ${NUM_WORKERS:-4}
+      --check_interval 30
+      --min_episodes 50
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 7
+  worker-7:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 7
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 8
+  worker-8:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 8
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 9
+  worker-9:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 9
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 10
+  worker-10:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 10
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 11
+  worker-11:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 11
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # TensorBoard for distributed training
+  tensorboard-distributed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-tensorboard-distributed
+    environment:
+      - PYTHONPATH=/workspace
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+    command: >
+      bash -c "
+      echo 'Waiting for log directories...';
+      sleep 15;
+      echo 'Searching for tensorboard directories...';
+      find /workspace/distributed_shared -name 'tensorboard' -type d;
+      if [ -d '/workspace/distributed_shared/worker_logs' ]; then
+        echo 'Found worker_logs directory, starting TensorBoard...';
+        tensorboard --logdir=/workspace/distributed_shared/worker_logs --host=0.0.0.0 --port=6007 --reload_interval=30;
+      else
+        echo 'Using distributed_shared as logdir...';
+        tensorboard --logdir=/workspace/distributed_shared --host=0.0.0.0 --port=6007 --reload_interval=30;
+      fi
+      "
+    ports:
+      - "6007:6007"
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+
+networks:
+  rl-training:
+    driver: bridge
+
+volumes:
+  distributed_shared:
+    driver: local
+    restart: unless-stopped
+
+  # Worker 0
+  worker-0:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 0
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 1
+  worker-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 1
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 2
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 2
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 3
+  worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 3
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 4
+  worker-4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 4
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 5
+  worker-5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 5
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Worker 6
+  worker-6:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      python distributed_worker.py
+      --worker_id 6
+      --shared_dir /workspace/distributed_shared
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0
+      --max_episodes 200
+      --lr 3e-4
+      --sync_interval 10
+      --timeout_minutes 30
+    networks:
+      - rl-training

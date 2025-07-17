@@ -631,9 +631,9 @@ def main():
     
     args = parser.parse_args()
     
-    # Validate worker_id
-    if args.worker_id < 0 or args.worker_id > 3:
-        raise ValueError("worker_id must be between 0 and 3")
+    MAX_WORKERS = 20  # Set a reasonable upper limit
+    if args.worker_id < 0 or args.worker_id >= MAX_WORKERS:
+        raise ValueError(f"worker_id must be between 0 and {MAX_WORKERS-1}")
     
     # Start enhanced distributed training
     distributed_training_worker(args)
