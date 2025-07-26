@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: rl-coordinator
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=""
@@ -20,12 +21,6 @@ services:
       --num_workers ${NUM_WORKERS:-4}
       --check_interval 30
       --min_episodes 50
-    # Note: depends_on should not point to itself 'coordinator'
-    # It should depend on services it needs to start *before* it.
-    # If coordinator has no pre-requisite services, remove this line or
-    # list actual dependencies like a database if you add one.
-    # depends_on:
-    #   - some_database_service
     restart: unless-stopped
     deploy:
       resources:
@@ -35,17 +30,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 0 (MOVED TO HERE)
+  # Worker 0
   worker-0:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -57,7 +53,7 @@ services:
       --worker_id 0
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -71,17 +67,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 1 (MOVED TO HERE)
+  # Worker 1
   worker-1:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -93,7 +90,7 @@ services:
       --worker_id 1
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -107,17 +104,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 2 (MOVED TO HERE)
+  # Worker 2
   worker-2:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -129,7 +127,7 @@ services:
       --worker_id 2
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -143,17 +141,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 3 (MOVED TO HERE)
+  # Worker 3
   worker-3:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -165,7 +164,7 @@ services:
       --worker_id 3
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -179,17 +178,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 4 (MOVED TO HERE)
+  # Worker 4
   worker-4:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -201,7 +201,7 @@ services:
       --worker_id 4
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -215,17 +215,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 5 (MOVED TO HERE)
+  # Worker 5
   worker-5:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -237,7 +238,7 @@ services:
       --worker_id 5
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -251,17 +252,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 6 (MOVED TO HERE)
+  # Worker 6
   worker-6:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -273,7 +275,7 @@ services:
       --worker_id 6
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -287,17 +289,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 7 (already correctly placed)
+  # Worker 7
   worker-7:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -309,7 +312,7 @@ services:
       --worker_id 7
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -323,17 +326,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 8 (already correctly placed)
+  # Worker 8
   worker-8:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -345,7 +349,7 @@ services:
       --worker_id 8
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -359,17 +363,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 9 (already correctly placed)
+  # Worker 9
   worker-9:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -381,7 +386,7 @@ services:
       --worker_id 9
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -395,17 +400,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 10 (already correctly placed)
+  # Worker 10
   worker-10:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -417,7 +423,7 @@ services:
       --worker_id 10
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -431,17 +437,18 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # Worker 11 (already correctly placed)
+  # Worker 11
   worker-11:
     build:
       context: .
       dockerfile: Dockerfile
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace/project:/workspace
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
-      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}     # <--- Add this line
-      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100} # <--- Add this line
+      - SAVE_EVAL_VIDEOS=${SAVE_EVAL_VIDEOS:-False}
+      - EVAL_VIDEO_FREQUENCY=${EVAL_VIDEO_FREQUENCY:-100}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./configs:/workspace/configs
@@ -453,7 +460,7 @@ services:
       --worker_id 11
       --shared_dir /workspace/distributed_shared
       --env ${ENV:-CartPole-v1}
-
+      --max_episodes 1000
     networks:
       - rl-training
     depends_on:
@@ -467,12 +474,13 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  # TensorBoard for distributed training (already correctly placed)
+  # TensorBoard for distributed training
   tensorboard-distributed:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: rl-tensorboard-distributed
+    entrypoint: ""
     environment:
       - PYTHONPATH=/workspace
     volumes:
@@ -507,5 +515,3 @@ networks:
 volumes:
   distributed_shared:
     driver: local
-    # Remove 'restart: unless-stopped' from here. Volumes don't restart.
-    # restart: unless-stopped

@@ -15,23 +15,23 @@ help: ## Show this help message
 	@echo "AI Mission Control - Docker Management"
 	@echo "======================================"
 	@echo "General Commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | grep -v 'distributed-' | grep -v 'legacy-' | grep -v 'quick-' | grep -v 'run-distributed-' | grep -v 'test' | grep -v 'logs' | grep -v 'ps' | grep -v 'clean' | grep -v 'docker-' | grep -v 'setup-' | grep -v 'copy-' | grep -v 'install-' | grep -v 'start' | grep -v 'quick-test'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-40s\033[0m %s\n", $$1, $$2}' | grep -v 'distributed-' | grep -v 'legacy-' | grep -v 'quick-' | grep -v 'run-distributed-' | grep -v 'test' | grep -v 'logs' | grep -v 'ps' | grep -v 'clean' | grep -v 'docker-' | grep -v 'setup-' | grep -v 'copy-' | grep -v 'install-' | grep -v 'start' | grep -v 'quick-test'
 
 	@echo ""
 	@echo "Distributed Training Commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | grep 'distributed-' | grep -v 'legacy-'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-40s\033[0m %s\n", $$1, $$2}' | grep 'distributed-' | grep -v 'legacy-'
 
 	@echo ""
 	@echo "Quick Start Distributed Commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | grep 'quick-'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-40s\033[0m %s\n", $$1, $$2}' | grep 'quick-'
 
 	@echo ""
 	@echo "Experiment Commands (Distributed):"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | grep 'run-distributed-'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-40s\033[0m %s\n", $$1, $$2}' | grep 'run-distributed-'
 
 	@echo ""
 	@echo "Utility & Cleanup Commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | grep -E '(test|logs|ps|clean|docker-|setup-|copy-|install-|start|quick-test)'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-40s\033[0m %s\n", $$1, $$2}' | grep -E '(test|logs|ps|clean|docker-|setup-|copy-|install-|start|quick-test)'
 
 	@echo ""
 	@echo "For more detailed usage, refer to the Makefile itself."
@@ -232,6 +232,7 @@ distributed-up: ## Start distributed RL training with $(NUM_WORKERS) workers
 		echo "  📋 Logs: make distributed-logs"; \
 		echo "  📈 TensorBoard: make distributed-tensorboard"; \
 		echo "  🐚 Shell: make distributed-shell-any-worker"; \
+		echo "  🏥 Health: make distributed-health-check"; \
 	else \
 		echo "❌ Failed to start distributed training"; \
 		echo "🔍 Checking what went wrong..."; \
@@ -253,8 +254,19 @@ endif
 .PHONY: distributed-down
 distributed-down: ## Stop distributed RL training and remove containers
 	@echo "🛑 Stopping distributed training..."
+	@echo "🔄 Stopping TensorBoard instances first..."
+	@$(MAKE) distributed-tensorboard-stop > /dev/null 2>&1 || true
+	@echo "🐳 Stopping Docker containers..."
 	docker-compose -f docker-compose.distributed.yml down
+	@echo ""
 	@echo "✅ Distributed training stopped."
+	@echo ""
+	@echo "🧹 Would you like to clean up files and data?"
+	@echo "  📁 make distributed-clean    - Remove shared directories and volumes"
+	@echo "  🗑️  make clean-all           - Complete cleanup (containers + data + volumes)"
+	@echo ""
+	@echo "💡 Example: make distributed-clean"
+	@echo "💡 To restart: make distributed-up"
 
 .PHONY: distributed-status
 distributed-status: ## Show status of distributed training services
@@ -522,17 +534,17 @@ legacy-distributed-tensorboard-worker-0: ## Start TensorBoard for worker-0 only 
 		pkill -f "tensorboard.*6008" 2>/dev/null || true; \
 		sleep 2; \
 	fi
-	@WORKER_LOG_DIR=$$(find distributed_shared -name "worker_0" -type d | head -1); \
-	if [ -z "$$WORKER_LOG_DIR" ]; then \
+	@WORKER_LOG_DIR=$(find distributed_shared -name "worker_0" -type d | head -1); \
+	if [ -z "$WORKER_LOG_DIR" ]; then \
 		echo "❌ Worker 0 logs not found. Make sure training is running. Try 'make distributed-find-logs'."; \
 		exit 1; \
 	fi; \
-	TENSORBOARD_DIR=$$(find "$$WORKER_LOG_DIR" -name "tensorboard" -type d | head -1); \
-	if [ -z "$$TENSORBOARD_DIR" ]; then \
-		echo "❌ Worker 0 tensorboard logs not found within $$WORKER_LOG_DIR. Ensure logs are being generated."; \
+	TENSORBOARD_DIR=$(find "$WORKER_LOG_DIR" -name "tensorboard" -type d | head -1); \
+	if [ -z "$TENSORBOARD_DIR" ]; then \
+		echo "❌ Worker 0 tensorboard logs not found within $WORKER_LOG_DIR. Ensure logs are being generated."; \
 		exit 1; \
 	fi; \
-	nohup tensorboard --logdir=$$TENSORBOARD_DIR --host=0.0.0.0 --port=6008 > tensorboard_worker0.log 2>&1 &
+	nohup tensorboard --logdir=$TENSORBOARD_DIR --host=0.0.0.0 --port=6008 > tensorboard_worker0.log 2>&1 &
 	@echo "✅ Worker-0 TensorBoard started at http://localhost:6008"
 	@echo "📋 Logs for this TensorBoard instance: tail -f tensorboard_worker0.log"
 
@@ -572,10 +584,10 @@ distributed-tensorboard-status: ## Check status of TensorBoard instances
 	@echo "====================="
 	@echo "🔍 Checking common TensorBoard ports (6006-6011)..."
 	@for port in 6006 6007 6008 6009 6010 6011; do \
-		if lsof -i :$$port >/dev/null 2>&1; then \
-			echo "✅ Port $$port: ACTIVE - http://localhost:$$port (PID: $$(lsof -i :$$port -t))"; \
+		if lsof -i :$port >/dev/null 2>&1; then \
+			echo "✅ Port $port: ACTIVE - http://localhost:$port (PID: $(lsof -i :$port -t))"; \
 		else \
-			echo "❌ Port $$port: FREE"; \
+			echo "❌ Port $port: FREE"; \
 		fi; \
 	done
 	@echo ""
@@ -604,10 +616,40 @@ distributed-analysis: ## Show distributed training analysis and file structure o
 .PHONY: distributed-clean
 distributed-clean: ## Clean up distributed training containers, networks, and volumes
 	@echo "🧹 Cleaning up distributed training (stopping containers, removing networks and volumes)..."
-	docker-compose -f docker-compose.distributed.yml down -v --rmi all
-	@echo "Removing local 'distributed_shared/' directory if it exists..."
-	rm -rf distributed_shared/ 2>/dev/null || true
-	@echo "✅ Distributed training cleanup complete."
+	@echo "⚠️  WARNING: This will delete training data in distributed_shared/"
+	@echo -n "Are you sure you want to proceed? Type 'yes' to confirm: "; \
+	read REPLY; \
+	if [ "$REPLY" = "yes" ]; then \
+		echo "🛑 Stopping TensorBoard instances..."; \
+		$(MAKE) distributed-tensorboard-stop > /dev/null 2>&1 || true; \
+		echo "🐳 Stopping containers..."; \
+		docker-compose -f docker-compose.distributed.yml down -v --rmi all; \
+		echo "📁 Removing local 'distributed_shared/' directory..."; \
+		rm -rf distributed_shared/ 2>/dev/null || true; \
+		echo "✅ Distributed training cleanup complete."; \
+	else \
+		echo "❌ Operation cancelled. No cleanup performed."; \
+	fi
+
+.PHONY: distributed-quick-restart
+distributed-quick-restart: ## Quick restart: stop everything and start with last settings
+	@echo "🔄 Quick restart of distributed training..."
+	@$(MAKE) distributed-down > /dev/null 2>&1 || true
+	@sleep 3
+	@$(MAKE) distributed-up
+
+.PHONY: distributed-save-results
+distributed-save-results: ## Save current training results to timestamped backup
+	@echo "💾 Saving current training results..."
+	@TIMESTAMP=$(date +%Y%m%d_%H%M%S); \
+	if [ -d "distributed_shared" ]; then \
+		mkdir -p backups; \
+		cp -r distributed_shared "backups/distributed_shared_$TIMESTAMP"; \
+		echo "✅ Results saved to: backups/distributed_shared_$TIMESTAMP"; \
+		echo "📊 Backup size: $(du -sh backups/distributed_shared_$TIMESTAMP | cut -f1)"; \
+	else \
+		echo "❌ No distributed_shared directory found to backup"; \
+	fi
 
 
 ## Utility Commands
@@ -649,7 +691,7 @@ clean-volumes: ## Remove all AI Mission Control volumes (WARNING: deletes all ex
 	@echo "⚠️ WARNING: This will delete ALL experiment data, logs, and models stored in Docker volumes!"
 	@echo -n "Are you absolutely sure you want to proceed? Type 'yes' to confirm: "; \
 	read REPLY; \
-	if [ "$$REPLY" = "yes" ]; then \
+	if [ "$REPLY" = "yes" ]; then \
 		echo "Deleting volumes: ai-mc-experiments, ai-mc-logs, ai-mc-models..."; \
 		docker volume rm ai-mc-experiments ai-mc-logs ai-mc-models 2>/dev/null || true; \
 		echo "Also removing local 'distributed_shared/' directory..."; \

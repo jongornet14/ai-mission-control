@@ -1,0 +1,93 @@
+🏥 Running distributed worker health check...
+[0;34m========================================[0m
+[0;34m   Distributed Worker Health Check[0m
+[0;34m========================================[0m
+
+[0;35m📊 CONTAINER STATUS CHECK[0m
+================================
+[0;32m✅ Found 4 active worker containers[0m
+
+Worker Container Details:
+NAMES                           STATUS                             CREATED          PORTS
+ai-mission-control-worker-2-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
+ai-mission-control-worker-0-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
+ai-mission-control-worker-1-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
+ai-mission-control-worker-3-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
+
+[0;32m✅ No workers in restart loop[0m
+
+
+[0;35m🔍 WORKER PROCESS CHECK[0m
+================================
+
+--- ai-mission-control-worker-2-1 ---
+[0;32m✅ Python training process active (PID: 1)[0m
+[1;33m⚠️  Low/no CPU usage detected[0m
+[0;32m✅ Memory usage: 2.1%[0m
+
+--- ai-mission-control-worker-0-1 ---
+[0;32m✅ Python training process active (PID: 1)[0m
+[1;33m⚠️  Low/no CPU usage detected[0m
+[0;32m✅ Memory usage: 2.1%[0m
+
+--- ai-mission-control-worker-1-1 ---
+[0;32m✅ Python training process active (PID: 1)[0m
+[1;33m⚠️  Low/no CPU usage detected[0m
+[0;32m✅ Memory usage: 2.1%[0m
+
+--- ai-mission-control-worker-3-1 ---
+[0;32m✅ Python training process active (PID: 1)[0m
+[1;33m⚠️  Low/no CPU usage detected[0m
+[0;32m✅ Memory usage: 2.1%[0m
+
+
+[0;35m🖥️  GPU USAGE CHECK[0m
+================================
+[0;32m✅ GPU accessible from workers[0m
+index, name, memory.used [MiB], memory.total [MiB], utilization.gpu [%]
+0, NVIDIA GeForce RTX 2070 SUPER, 1634 MiB, 8192 MiB, 94 %
+[0;32m✅ GPU memory in use: 1634MiB[0m
+
+
+[0;35m📝 LOG GENERATION CHECK[0m
+================================
+[0;32m✅ distributed_shared directory exists[0m
+[0;32m✅ Found 6 worker log directories[0m
+[0;32m✅ TensorBoard logs found in 5 workers[0m
+[1;33m⚠️  No recent log activity (last 5 minutes)[0m
+[0;32m✅ Found 15 model checkpoints[0m
+
+
+[0;35m📈 TRAINING PROGRESS CHECK[0m
+================================
+[0;32m✅ Recent coordinator activity:[0m
+BEST WORKER: 0 (Score: 58.9154)
+✅ Copied best model from worker 0
+✅ Sync 2 completed successfully
+[0;32m✅ Found performance metrics for 2 workers[0m
+
+Latest Worker Performance:
+  Worker 0: 150 episodes, avg reward: 139.00
+  Worker 99: 0 episodes, avg reward: 0.00
+
+
+[0;35m🔄 WORKER COMMUNICATION CHECK[0m
+================================
+[0;32m✅ Found 3 coordination signals[0m
+[1;33m⚠️  Best model is old (39 minutes old)[0m
+
+
+[0;34m📊 HEALTH SUMMARY[0m
+================================
+[0;32m✅ Container Status: HEALTHY[0m
+[0;32m✅ Log Generation: WORKING[0m
+[0;32m✅ Model Checkpoints: FOUND[0m
+[0;32m✅ Performance Metrics: AVAILABLE[0m
+
+[0;34mOverall Health: 4/6 checks passed[0m
+[0;32m✅ Workers appear to be functioning correctly! 🎉[0m
+
+💡 Next steps:
+  - Monitor progress: make distributed-logs
+  - View TensorBoard: make distributed-tensorboard
+  - Check GPU usage: make distributed-watch-gpu

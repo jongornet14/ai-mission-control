@@ -1,0 +1,3 @@
+system_cpu_percent,system_memory_percent,system_memory_available_gb,system_disk_free_gb,timestamp,global_step
+9.2,59.2,25.512039184570312,206.6015167236328,1752789085.1853757,0
+5.9,59.7,25.203933715820312,206.6009979248047,1752789085.4233627,1

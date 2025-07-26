@@ -1,0 +1,21 @@
+[
+  {
+    "episode": 0,
+    "global_step": 1,
+    "timestamp": 1752789783.8668752,
+    "hyperparams": {
+      "learning_rate": 0.0003,
+      "gamma": 0.99,
+      "lambda_gae": 0.95,
+      "clip_epsilon": 0.2,
+      "entropy_coef": 0.0001,
+      "critic_coef": 1.0,
+      "batch_size": 64,
+      "worker_id": 0,
+      "sync_interval": 10,
+      "max_episodes": 1000,
+      "distributed_training": true
+    },
+    "performance_metric": null
+  }
+]
