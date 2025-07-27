@@ -122,33 +122,33 @@ def apply_universal_step_to_files():
                 # Insert the function after imports
                 function_def = '''
 
-def universal_gym_step(env, action):
-    """
-    Universal function to handle both old and new Gym step API compatibility.
-    
-    Args:
-        env: The gym environment
-        action: The action to take
-        
-    Returns:
-        tuple: Always returns (obs, reward, done, truncated, info) regardless of Gym version
-    """
-    step_result = env.step(action)
-    
-    if len(step_result) == 4:
-        # Old Gym API (before v0.26): (obs, reward, done, info)
-        obs, reward, done, info = step_result
-        truncated = False
-    elif len(step_result) == 5:
-        # New Gym API (v0.26+): (obs, reward, terminated, truncated, info)
-        obs, reward, done, truncated, info = step_result
-    else:
-        raise ValueError(f"Unexpected step result length: {len(step_result)}. "
-                        f"Expected 4 or 5 values, got {step_result}")
-    
-    return obs, reward, done, truncated, info
+                                def universal_gym_step(env, action):
+                                    """
+                                    Universal function to handle both old and new Gym step API compatibility.
+                                    
+                                    Args:
+                                        env: The gym environment
+                                        action: The action to take
+                                        
+                                    Returns:
+                                        tuple: Always returns (obs, reward, done, truncated, info) regardless of Gym version
+                                    """
+                                    step_result = env.step(action)
+                                    
+                                    if len(step_result) == 4:
+                                        # Old Gym API (before v0.26): (obs, reward, done, info)
+                                        obs, reward, done, info = step_result
+                                        truncated = False
+                                    elif len(step_result) == 5:
+                                        # New Gym API (v0.26+): (obs, reward, terminated, truncated, info)
+                                        obs, reward, done, truncated, info = step_result
+                                    else:
+                                        raise ValueError(f"Unexpected step result length: {len(step_result)}. "
+                                                        f"Expected 4 or 5 values, got {step_result}")
+                                    
+                                    return obs, reward, done, truncated, info
 
-'''
+                                '''
 
                 content = (
                     "\n".join(import_section) + function_def + "\n".join(rest_of_file)

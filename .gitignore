@@ -1,0 +1,239 @@
+# AI Mission Control - .gitignore
+# ================================
+
+# Python
+# -------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual Environments
+# --------------------
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+conda-meta/
+
+# Jupyter Notebook
+# ----------------
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# PyTorch & Deep Learning
+# -----------------------
+*.pth
+*.pt
+*.pkl
+*.pickle
+checkpoints/
+saved_models/
+model_weights/
+pretrained/
+*.onnx
+*.torchscript
+
+# TensorBoard & Logging
+# ---------------------
+runs/
+logs/
+tensorboard/
+tb_logs/
+*.log
+*.out
+event*
+*.tfevents.*
+
+# Distributed Training
+# --------------------
+distributed_shared/
+worker_logs/
+coordinator_logs/
+*.signal
+backups/
+experiments/
+results/
+outputs/
+
+# Data & Datasets
+# ---------------
+data/
+datasets/
+*.csv
+*.json
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.parquet
+raw_data/
+processed_data/
+
+# Docker & Containers
+# -------------------
+.dockerignore
+docker-compose.override.yml
+.docker/
+*.tar
+*.tar.gz
+
+# Environment Variables
+# ---------------------
+.env.local
+.env.development
+.env.test
+.env.production
+secrets.yml
+config.local.yml
+
+# IDE & Editors
+# --------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS Files
+# --------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary Files
+# ---------------
+tmp/
+temp/
+*.tmp
+*.temp
+*.cache
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Videos & Media
+# --------------
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+videos/
+recordings/
+tensorboard_videos/
+
+# Weights & Biases
+# -----------------
+wandb/
+.wandb/
+
+# MLflow
+# ------
+mlruns/
+.mlflow/
+
+# Hyperparameter Optimization
+# ---------------------------
+optuna_storage.db
+hyperopt_trials.pkl
+ray_results/
+tune_results/
+
+# Conda
+# -----
+.conda/
+*.conda
+
+# Large Files (should use Git LFS instead)
+# ----------------------------------------
+*.zip
+*.gz
+*.tar.xz
+*.7z
+*.rar
+
+# Backup Files
+# ------------
+*.bak
+*.backup
+*~
+*.orig
+
+# Build & Compilation
+# -------------------
+*.o
+*.a
+*.la
+*.lo
+*.so.*
+*.dylib
+*.dll
+
+# Documentation Build
+# -------------------
+docs/_build/
+site/
+
+# Testing
+# -------
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Research & Papers
+# -----------------
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+
+# Custom Project Files
+# --------------------
+# Add your specific ignores here:
+distrubuted_share/

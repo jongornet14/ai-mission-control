@@ -36,7 +36,7 @@ class UniversalRLTrainer:
         # Setup experiment directory first
         self.setup_experiment_dir()
 
-        # Initialize CRAZY LOGGER! 🚀
+        # Initialize CRAZY LOGGER!
         # Ensure logger is initialized after config and exp_dir setup
         self.logger = CrazyLogger(
             log_dir=self.exp_dir, experiment_name=self.config["experiment"]["name"]
@@ -66,14 +66,14 @@ class UniversalRLTrainer:
                 with open(config_path, "r") as f:
                     config = yaml.safe_load(f)
                 found_config_file = True
-                print(f"✅ Loaded configuration from: {config_path}")
+                print(f"Loaded configuration from: {config_path}")
             except Exception as e:
                 print(
-                    f"❌ Error loading config from {config_path}: {e}. Attempting to load default config."
+                    f"Error loading config from {config_path}: {e}. Attempting to load default config."
                 )
         elif config_path:  # config_path was provided but didn't exist
             print(
-                f"⚠️ Provided config file does not exist: {config_path}. Attempting to load default config."
+                f"Provided config file does not exist: {config_path}. Attempting to load default config."
             )
 
         # If not loaded from provided path, try default config
@@ -91,14 +91,14 @@ class UniversalRLTrainer:
                         config = yaml.safe_load(f)
                     found_config_file = True
                     print(
-                        f"✅ Loaded default configuration from: {default_config_path}"
+                        f"Loaded default configuration from: {default_config_path}"
                     )
                 except Exception as e:
                     print(
-                        f"❌ Error loading default config from {default_config_path}: {e}."
+                        f"Error loading default config from {default_config_path}: {e}."
                     )
             else:
-                print(f"❌ Default configuration file not found: {default_config_path}")
+                print(f"Default configuration file not found: {default_config_path}")
 
         # If still no config, raise an error
         if not found_config_file:
@@ -116,17 +116,17 @@ class UniversalRLTrainer:
                 )
                 description = "Default configuration file"  # Be more specific
 
-            error_msg = f"❌ {description} not found: {display_path_for_error}"
+            error_msg = f" {description} not found: {display_path_for_error}"
 
             current_dir = Path.cwd()
-            print(f"❌ {error_msg}")
-            print(f"📍 Current directory: {current_dir}")
-            print(f"📁 Directory contents: {list(current_dir.iterdir())}")
+            print(f"Error: {error_msg}")
+            print(f"Current directory: {current_dir}")
+            print(f"Directory contents: {list(current_dir.iterdir())}")
 
             # Use 'display_path_for_error' here
             if display_path_for_error.parent != current_dir:
                 print(
-                    f"📁 Parent directory {display_path_for_error.parent} contents: {list(display_path_for_error.parent.iterdir()) if display_path_for_error.parent.exists() else 'Directory does not exist'}"
+                    f"Parent directory {display_path_for_error.parent} contents: {list(display_path_for_error.parent.iterdir()) if display_path_for_error.parent.exists() else 'Directory does not exist'}"
                 )
 
             # Log to your logger if available (logger might not be initialized yet if this is the first error)
@@ -164,7 +164,7 @@ class UniversalRLTrainer:
         self.exp_dir = Path(self.config["experiment"]["save_dir"]) / exp_name
         self.exp_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"📁 Experiment directory: {self.exp_dir}")
+        print(f"Experiment directory: {self.exp_dir}")
 
     def create_environment(self):
         """Create and configure the environment"""
@@ -193,7 +193,7 @@ class UniversalRLTrainer:
 
         self.logger.log_step(**env_info)
 
-        print(f"🎮 Environment: {env_config['name']}")
+        print(f"Environment: {env_config['name']}")
         print(f"   Observation space: {self.env.observation_space}")
         print(f"   Action space: {self.env.action_space}")
 
@@ -206,7 +206,7 @@ class UniversalRLTrainer:
         # Log initial hyperparameters
         self.logger.log_hyperparameters(self.algorithm.get_hyperparameters())
 
-        print(f"🧠 Algorithm: {algo_config['name']}")
+        print(f"Algorithm: {algo_config['name']}")
 
     def collect_episode(self):
         """Collect a complete episode with detailed logging"""
@@ -361,7 +361,7 @@ class UniversalRLTrainer:
                         frame = self.env.render()
                         frames.append(frame)
                     except Exception as e:
-                        print(f"❌ Eval frame capture failed: {e}")
+                        print(f"Eval frame capture failed: {e}")
                         frames = None
 
                 eval_reward += to_scalar(reward)
@@ -410,7 +410,7 @@ class UniversalRLTrainer:
         """Main training loop with CRAZY comprehensive logging"""
         from tqdm import tqdm  # Add this import
 
-        print(f"\n🚀 Starting training with CrazyLogger...")
+        print(f"\nStarting training with CrazyLogger...")
         print(f"Device: {self.device}")
         print("=" * 50)
 
@@ -426,7 +426,7 @@ class UniversalRLTrainer:
             estimated_episodes = training_config["total_frames"] // max_steps
             training_config["total_episodes"] = estimated_episodes
             print(
-                f"🔄 Using {estimated_episodes} episodes for {training_config['total_frames']} frames"
+                f"Using {estimated_episodes} episodes for {training_config['total_frames']} frames"
             )
 
         # Log initial configuration
@@ -522,10 +522,10 @@ class UniversalRLTrainer:
 
         # Final evaluation and report
         final_eval = self.evaluate_policy()
-        print(f"\n✅ Training completed!")
-        print(f"🏆 Best reward: {self.best_reward:.2f}")
+        print(f"\nTraining completed!")
+        print(f"Best reward: {self.best_reward:.2f}")
         print(
-            f"🎯 Final reward: {final_eval['eval_reward_mean']:.2f} ± {final_eval['eval_reward_std']:.2f}"
+            f"Final reward: {final_eval['eval_reward_mean']:.2f} ± {final_eval['eval_reward_std']:.2f}"
         )
 
         # Generate final comprehensive report
@@ -690,8 +690,8 @@ def main():
     trainer = UniversalRLTrainer(config_path=args.config, **kwargs)
     summary = trainer.train()
 
-    print(f"\n🎉 Experiment completed!")
-    print(f"📊 Full results: {summary}")
+    print(f"\nExperiment completed!")
+    print(f"Full results: {summary}")
 
 
 if __name__ == "__main__":

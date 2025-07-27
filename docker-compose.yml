@@ -16,11 +16,118 @@ services:
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - PYTHONPATH=/workspace/project
+      - NVIDIA_VISIBLE_DEVICES=all
     stdin_open: true
     tty: true
     runtime: nvidia
+
+  coordinator:
+    image: ai-mission-control:latest
+    container_name: rl-coordinator
+    entrypoint: ["/bin/bash", "-c"]
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=""  # Coordinator doesn't need GPU
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      "source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python -m intellinaut.workers.coordinator
+      --shared_dir /workspace/distributed_shared
+      --num_workers 4
+      --check_interval 30"
+    restart: unless-stopped
+
+  worker-0:
+    image: ai-mission-control:latest
+    container_name: rl-worker-0
+    entrypoint: ["/bin/bash", "-c"]
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      "source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python -m intellinaut.workers.distributed
+      --worker_id 0
+      --shared_dir /workspace/distributed_shared
+      --max_episodes 1000
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0"
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-1:
+    image: ai-mission-control:latest
+    container_name: rl-worker-1
+    entrypoint: ["/bin/bash", "-c"]
+    environment:
+      - PYTHONPATH=/workspace/project:/workspace
+      - CUDA_VISIBLE_DEVICES=0  # Both workers can share GPU for testing
+      - ENV=${ENV:-CartPole-v1}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      "source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python -m intellinaut.workers.distributed
+      --worker_id 1
+      --shared_dir /workspace/distributed_shared
+      --max_episodes 1000
+      --env ${ENV:-CartPole-v1}
+      --device cuda:0"
+    depends_on:
+      - coordinator
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  tensorboard-distributed:
+    image: ai-mission-control:latest
+    container_name: rl-tensorboard-distributed
+    entrypoint: ["/bin/bash", "-c"]
+    environment:
+      - PYTHONPATH=/workspace
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+    command: >
+      "source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      echo 'Waiting for log directories...' &&
+      sleep 15 &&
+      if [ -d '/workspace/distributed_shared/worker_logs' ]; then
+        echo 'Starting TensorBoard for distributed training...';
+        tensorboard --logdir=/workspace/distributed_shared/worker_logs --host=0.0.0.0 --port=6007 --reload_interval=30;
+      else
+        echo 'No worker logs found yet, starting with distributed_shared...';
+        tensorboard --logdir=/workspace/distributed_shared --host=0.0.0.0 --port=6007 --reload_interval=30;
+      fi"
+    ports:
+      - "6007:6007"
+    restart: unless-stopped
 
 volumes:
   ai_mc_experiments:

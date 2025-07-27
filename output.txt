@@ -1,93 +1,337 @@
-🏥 Running distributed worker health check...
-[0;34m========================================[0m
-[0;34m   Distributed Worker Health Check[0m
-[0;34m========================================[0m
+🧪 Testing Intellinaut Workers
+==================================================
+🚀 CrazyLogger initialized: /tmp/tmpwzjago1o/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpwzjago1o/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpwzjago1o
+🎯 Max episodes: 10
+WORKER_STATUS: LOADING_COMPONENTS worker_id=0 episode=0
+WORKER_STATUS: ERROR worker_id=0 episode=0
+🚀 CrazyLogger initialized: /tmp/tmpb1pcabjg/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpb1pcabjg/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpb1pcabjg
+🎯 Max episodes: 10
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
-[0;35m📊 CONTAINER STATUS CHECK[0m
-================================
-[0;32m✅ Found 4 active worker containers[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmpb1pcabjg/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmpb1pcabjg/crazy_logs/analysis
+📋 Data: /tmp/tmpb1pcabjg/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmpb1pcabjg/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmpa7ag0n4q/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpa7ag0n4q/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpa7ag0n4q
+🎯 Max episodes: 10
+WORKER_STATUS: TESTING worker_id=0 episode=0
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
-Worker Container Details:
-NAMES                           STATUS                             CREATED          PORTS
-ai-mission-control-worker-2-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
-ai-mission-control-worker-0-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
-ai-mission-control-worker-1-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
-ai-mission-control-worker-3-1   Up 46 seconds (health: starting)   46 seconds ago   6006/tcp, 8080/tcp, 8888/tcp
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmpa7ag0n4q/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmpa7ag0n4q/crazy_logs/analysis
+📋 Data: /tmp/tmpa7ag0n4q/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmpa7ag0n4q/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmpy3ie5lyd/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpy3ie5lyd/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpy3ie5lyd
+🎯 Max episodes: 5
+WORKER_STATUS: LOADING_COMPONENTS worker_id=0 episode=0
+WORKER_STATUS: ERROR worker_id=0 episode=0
+🚀 CrazyLogger initialized: /tmp/tmpoa_7ern4/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpoa_7ern4/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpoa_7ern4/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmpoa_7ern4/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+WORKER_STATUS: CONFIG_UPDATED worker_id=0 episode=0
+Worker 0: Max episodes updated: 10 → 20
+Worker 0: Config updated to version 1
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
-[0;32m✅ No workers in restart loop[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmpoa_7ern4/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmpoa_7ern4/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmpoa_7ern4/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmpoa_7ern4/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmp32y61wwv/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp32y61wwv/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmp32y61wwv/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmp32y61wwv/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmp32y61wwv/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmp32y61wwv/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmp32y61wwv/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmp32y61wwv/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmp10g3_5l5/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp10g3_5l5/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmp10g3_5l5/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmp10g3_5l5/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
-[0;35m🔍 WORKER PROCESS CHECK[0m
-================================
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmp10g3_5l5/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmp10g3_5l5/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmp10g3_5l5/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmp10g3_5l5/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=3
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmpc7wy631m/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpc7wy631m/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpc7wy631m/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmpc7wy631m/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+Worker 0: Individual termination signal received
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
---- ai-mission-control-worker-2-1 ---
-[0;32m✅ Python training process active (PID: 1)[0m
-[1;33m⚠️  Low/no CPU usage detected[0m
-[0;32m✅ Memory usage: 2.1%[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmpc7wy631m/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmpc7wy631m/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmpc7wy631m/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmpc7wy631m/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmp4vm0kv5g/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp4vm0kv5g/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmp4vm0kv5g/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmp4vm0kv5g/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+WORKER_STATUS: ADAPTIVE_INIT worker_id=0 episode=0
+🧬 AdaptiveWorker 0 initialized
+🔄 Morphing frequency: 5 episodes
+📐 Architecture morphing: ENABLED
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
---- ai-mission-control-worker-0-1 ---
-[0;32m✅ Python training process active (PID: 1)[0m
-[1;33m⚠️  Low/no CPU usage detected[0m
-[0;32m✅ Memory usage: 2.1%[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmp4vm0kv5g/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmp4vm0kv5g/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmp4vm0kv5g/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmp4vm0kv5g/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmpe9kwj013/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpe9kwj013/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpe9kwj013/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmpe9kwj013/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+WORKER_STATUS: ADAPTIVE_INIT worker_id=0 episode=0
+🧬 AdaptiveWorker 0 initialized
+🔄 Morphing frequency: 100 episodes
+📐 Architecture morphing: ENABLED
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
---- ai-mission-control-worker-1-1 ---
-[0;32m✅ Python training process active (PID: 1)[0m
-[1;33m⚠️  Low/no CPU usage detected[0m
-[0;32m✅ Memory usage: 2.1%[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmpe9kwj013/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmpe9kwj013/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmpe9kwj013/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmpe9kwj013/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=50
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmpoyc7_tku/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmpoyc7_tku/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmpoyc7_tku/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmpoyc7_tku/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+WORKER_STATUS: ADAPTIVE_INIT worker_id=0 episode=0
+🧬 AdaptiveWorker 0 initialized
+🔄 Morphing frequency: 100 episodes
+📐 Architecture morphing: ENABLED
+WORKER_STATUS: LOADING_COMPONENTS worker_id=0 episode=0
+WORKER_STATUS: ERROR worker_id=0 episode=0
+🚀 CrazyLogger initialized: /tmp/tmp3z862u4e/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp3z862u4e/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmp3z862u4e/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmp3z862u4e/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+WORKER_STATUS: ADAPTIVE_INIT worker_id=0 episode=0
+🧬 AdaptiveWorker 0 initialized
+🔄 Morphing frequency: 100 episodes
+📐 Architecture morphing: ENABLED
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
---- ai-mission-control-worker-3-1 ---
-[0;32m✅ Python training process active (PID: 1)[0m
-[1;33m⚠️  Low/no CPU usage detected[0m
-[0;32m✅ Memory usage: 2.1%[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmp3z862u4e/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmp3z862u4e/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmp3z862u4e/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmp3z862u4e/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmp0acc9dmd/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp0acc9dmd/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmp0acc9dmd/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmp0acc9dmd/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+WORKER_STATUS: ADAPTIVE_INIT worker_id=0 episode=0
+🧬 AdaptiveWorker 0 initialized
+🔄 Morphing frequency: 10 episodes
+📐 Architecture morphing: ENABLED
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmp0acc9dmd/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmp0acc9dmd/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmp0acc9dmd/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmp0acc9dmd/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=15
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmprth8nlpt/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmprth8nlpt/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmprth8nlpt/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmprth8nlpt/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+WORKER_STATUS: ADAPTIVE_INIT worker_id=0 episode=0
+🧬 AdaptiveWorker 0 initialized
+🔄 Morphing frequency: 100 episodes
+📐 Architecture morphing: ENABLED
+Worker 0: Loaded 3 successful architectures
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
-[0;35m🖥️  GPU USAGE CHECK[0m
-================================
-[0;32m✅ GPU accessible from workers[0m
-index, name, memory.used [MiB], memory.total [MiB], utilization.gpu [%]
-0, NVIDIA GeForce RTX 2070 SUPER, 1634 MiB, 8192 MiB, 94 %
-[0;32m✅ GPU memory in use: 1634MiB[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmprth8nlpt/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmprth8nlpt/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmprth8nlpt/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmprth8nlpt/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=0
+✅ Worker 0: Cleanup completed
+🚀 CrazyLogger initialized: /tmp/tmp385y9nu8/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp385y9nu8/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmp385y9nu8/shared/worker_logs/worker_0
+🎯 Max episodes: 10
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmp385y9nu8/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+🚀 CrazyLogger initialized: /tmp/tmp478r0rpr/shared/worker_logs/worker_0/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp478r0rpr/shared/worker_logs/worker_0/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=0 episode=0
+🚀 BaseWorker 0 initialized
+📁 Log directory: /tmp/tmp478r0rpr/shared/worker_logs/worker_0
+🎯 Max episodes: 5
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=0 episode=0
+DistributedWorker 0 initialized
+Shared directory: /tmp/tmp478r0rpr/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+🚀 CrazyLogger initialized: /tmp/tmp478r0rpr/shared/worker_logs/worker_1/crazy_logs
+📊 TensorBoard: tensorboard --logdir /tmp/tmp478r0rpr/shared/worker_logs/worker_1/crazy_logs/tensorboard
+WORKER_STATUS: INITIALIZED worker_id=1 episode=0
+🚀 BaseWorker 1 initialized
+📁 Log directory: /tmp/tmp478r0rpr/shared/worker_logs/worker_1
+🎯 Max episodes: 5
+WORKER_STATUS: DISTRIBUTED_INIT worker_id=1 episode=0
+DistributedWorker 1 initialized
+Shared directory: /tmp/tmp478r0rpr/shared
+Sync interval: 10 episodes
+Sync timeout: 30 minutes
+🧹 Worker 0: Cleaning up...
+❌ Worker 0: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmp478r0rpr/shared/worker_logs/worker_0/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmp478r0rpr/shared/worker_logs/worker_0/crazy_logs/analysis
+📋 Data: /tmp/tmp478r0rpr/shared/worker_logs/worker_0/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmp478r0rpr/shared/worker_logs/worker_0/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=0 episode=3
+✅ Worker 0: Cleanup completed
+🧹 Worker 1: Cleaning up...
+❌ Worker 1: Checkpoint save error: 'NoneType' object has no attribute 'policy_net'
 
-[0;35m📝 LOG GENERATION CHECK[0m
-================================
-[0;32m✅ distributed_shared directory exists[0m
-[0;32m✅ Found 6 worker log directories[0m
-[0;32m✅ TensorBoard logs found in 5 workers[0m
-[1;33m⚠️  No recent log activity (last 5 minutes)[0m
-[0;32m✅ Found 15 model checkpoints[0m
+🎯 Final Report Generated!
+📊 Summary: /tmp/tmp478r0rpr/shared/worker_logs/worker_1/crazy_logs/experiment_summary.json
+📈 Analysis: /tmp/tmp478r0rpr/shared/worker_logs/worker_1/crazy_logs/analysis
+📋 Data: /tmp/tmp478r0rpr/shared/worker_logs/worker_1/crazy_logs/metrics
+🔒 CrazyLogger closed. Data saved to: /tmp/tmp478r0rpr/shared/worker_logs/worker_1/crazy_logs
+WORKER_STATUS: SHUTDOWN worker_id=1 episode=3
+✅ Worker 1: Cleanup completed
 
-
-[0;35m📈 TRAINING PROGRESS CHECK[0m
-================================
-[0;32m✅ Recent coordinator activity:[0m
-BEST WORKER: 0 (Score: 58.9154)
-✅ Copied best model from worker 0
-✅ Sync 2 completed successfully
-[0;32m✅ Found performance metrics for 2 workers[0m
-
-Latest Worker Performance:
-  Worker 0: 150 episodes, avg reward: 139.00
-  Worker 99: 0 episodes, avg reward: 0.00
-
-
-[0;35m🔄 WORKER COMMUNICATION CHECK[0m
-================================
-[0;32m✅ Found 3 coordination signals[0m
-[1;33m⚠️  Best model is old (39 minutes old)[0m
-
-
-[0;34m📊 HEALTH SUMMARY[0m
-================================
-[0;32m✅ Container Status: HEALTHY[0m
-[0;32m✅ Log Generation: WORKING[0m
-[0;32m✅ Model Checkpoints: FOUND[0m
-[0;32m✅ Performance Metrics: AVAILABLE[0m
-
-[0;34mOverall Health: 4/6 checks passed[0m
-[0;32m✅ Workers appear to be functioning correctly! 🎉[0m
-
-💡 Next steps:
-  - Monitor progress: make distributed-logs
-  - View TensorBoard: make distributed-tensorboard
-  - Check GPU usage: make distributed-watch-gpu
+❌ Tests failed: 2 failures, 3 errors

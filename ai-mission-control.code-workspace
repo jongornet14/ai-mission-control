@@ -3,7 +3,479 @@
 		{
 			"name": "ai-mission-control",
 			"path": "."
+		},
+		{
+			"path": ""
 		}
 	],
-	"settings": {}
+	"settings": {
+		// Visual Enhancements
+		"workbench.colorTheme": "One Dark Pro",
+		"workbench.iconTheme": "material-icon-theme",
+		"editor.fontSize": 16,
+		"editor.lineHeight": 1.5,
+		"editor.cursorBlinking": "smooth",
+		"editor.smoothScrolling": true,
+		// Code Layout
+		"editor.rulers": [
+			88,
+			120
+		],
+		"editor.bracketPairColorization.enabled": true,
+		"editor.guides.bracketPairs": "active",
+		"editor.bracketPairColorization.independentColorPoolPerBracketType": true,
+		"editor.minimap.enabled": true,
+		"editor.minimap.scale": 1,
+		// Advanced Editor Features (AI-free)
+		"editor.inlayHints.enabled": "off",
+		"editor.codeLens": false,
+		"editor.suggest.preview": false,
+		"breadcrumbs.enabled": true,
+		"editor.gotoLocation.multipleReferences": "peek",
+		"editor.peekWidgetDefaultFocus": "editor",
+		// Advanced Editing
+		"editor.multiCursorModifier": "ctrlCmd",
+		"editor.wordWrap": "on",
+		"editor.wordWrapColumn": 88,
+		"editor.linkedEditing": true,
+		// Disable AI/Copilot Features (keeping Claude Code separate)
+		"github.copilot.enable": {
+			"*": false,
+			"yaml": false,
+			"plaintext": false,
+			"markdown": false,
+			"python": false,
+			"jupyter": false
+		},
+		"github.copilot.editor.enableAutoCompletions": false,
+		"github.copilot.chat.enable": false,
+		"editor.inlineSuggest.enabled": false,
+		// Basic suggestions (non-AI) - enabled for productivity
+		"editor.quickSuggestions": {
+			"other": "on",
+			"comments": false,
+			"strings": false
+		},
+		"editor.suggestOnTriggerCharacters": true,
+		"editor.acceptSuggestionOnCommitCharacter": true,
+		"editor.acceptSuggestionOnEnter": "on",
+		"editor.tabCompletion": "on",
+		"editor.wordBasedSuggestions": "matchingDocuments",
+		"editor.parameterHints.enabled": true,
+		// Jupyter AI Disabling
+		"jupyter.experimental.debugging": false,
+		// Folding & Indentation
+		"editor.foldingStrategy": "indentation",
+		"editor.showFoldingControls": "mouseover",
+		"editor.guides.indentation": true,
+		"editor.detectIndentation": true,
+		// Python Settings (AI-free)
+		"python.formatting.provider": "black",
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": false,
+		"python.linting.flake8Enabled": true,
+		"editor.formatOnSave": true,
+		"python.analysis.autoImportCompletions": true,
+		"python.analysis.completeFunctionParens": true,
+		// File Explorer
+		"explorer.compactFolders": false,
+		"explorer.fileNesting.enabled": true,
+		"explorer.fileNesting.patterns": {
+			"*.py": "${basename}_test.py, ${basename}.ipynb",
+			"requirements.txt": "requirements-*.txt, pyproject.toml, setup.py, setup.cfg",
+			"README.md": "README*, LICENSE*, CHANGELOG*",
+			"docker-compose.yml": "docker-compose.*.yml, Dockerfile*"
+		},
+		// Terminal Configuration
+		"terminal.integrated.fontSize": 13,
+		"terminal.integrated.fontFamily": "Consolas",
+		"terminal.integrated.cursorBlinking": true,
+		"terminal.integrated.shell.osx": "/bin/zsh",
+		"terminal.integrated.profiles.osx": {
+			"zsh": {
+				"path": "/bin/zsh",
+				"args": [
+					"-l"
+				]
+			},
+			"bash": {
+				"path": "/bin/bash",
+				"args": [
+					"-l"
+				]
+			}
+		},
+		"terminal.integrated.defaultProfile.osx": "zsh",
+		// File Management
+		"files.watcherExclude": {
+			"**/.git/objects/**": true,
+			"**/node_modules/**": true,
+			"**/venv/**": true,
+			"**/__pycache__/**": true,
+			"**/results/**": true,
+			"**/.claude/**": true
+		},
+		"files.autoSave": "onFocusChange",
+		"files.hotExit": "onExitAndWindowClose",
+		// Workspace Specific
+		"files.associations": {
+			"*.py": "python",
+			"*.md": "markdown",
+			"*.ipynb": "jupyter-notebook",
+			".clauderc": "json",
+			"claude.toml": "toml"
+		},
+		// Color Customizations
+		"workbench.colorCustomizations": {
+			"editorRuler.foreground": "#444",
+			"tab.activeBorder": "#007acc",
+			"activityBar.background": "#1e1e1e",
+			"statusBar.background": "#007ACC",
+			"statusBar.noFolderBackground": "#68217A",
+			"statusBar.debuggingBackground": "#CC6633",
+			"activityBarBadge.background": "#007ACC",
+			"activityBarBadge.foreground": "#FFFFFF"
+		},
+		"editor.tokenColorCustomizations": {
+			"comments": "#6A9955",
+			"keywords": "#569CD6",
+			"strings": "#CE9178"
+		},
+		// Search & Git
+		"search.exclude": {
+			"**/node_modules": true,
+			"**/venv": true,
+			"**/__pycache__": true,
+			"**/.git": true,
+			"**/results": true,
+			"**/.claude": true
+		},
+		"git.enableSmartCommit": true,
+		"git.confirmSync": false,
+		// Productivity Settings
+		"keyboard.dispatch": "keyCode",
+		"workbench.commandPalette.history": 50,
+		"workbench.quickOpen.closeOnFocusLoss": false,
+		"zenMode.centerLayout": false,
+		"zenMode.hideLineNumbers": false,
+		// Jupyter settings (AI-free)
+		"jupyter.askForKernelRestart": false,
+		"jupyter.interactiveWindow.creationMode": "perFile",
+		"jupyter.alwaysTrustNotebooks": true,
+		"jupyter.defaultKernel": "python3",
+		"jupyter.jupyterServerType": "local",
+		"jupyter.outputs.textLineLimit": 30,
+		"jupyter.variableExplorer.decorateVariables": true,
+		"jupyter.interactiveWindow.textEditor.magicCommandsAsComments": false,
+		"jupyter.interactiveWindow.codeLens.enable": false,
+		// Notebook Display
+		"notebook.cellToolbarLocation": {
+			"default": "right",
+			"jupyter-notebook": "left"
+		},
+		"notebook.showCellStatusBar": "visible",
+		"notebook.compactView": false,
+		"notebook.outline.showCodeCells": true,
+		"notebook.output.textLineLimit": 30,
+		"notebook.output.minimalErrorRendering": false
+	},
+	"extensions": {
+		"recommendations": [
+			// Core Python (no AI extensions)
+			"ms-python.python",
+			"ms-python.black-formatter",
+			"charliermarsh.ruff",
+			// Git & Version Control (no Copilot)
+			"eamodio.gitlens",
+			"mhutchie.git-graph",
+			"github.vscode-pull-request-github",
+			// Productivity (no AI)
+			"ms-vscode.todo-highlight",
+			"gruntfuggly.todo-tree",
+			"streetsidesoftware.code-spell-checker",
+			"formulahendry.code-runner",
+			// Visual Enhancements
+			"zhuangtongfa.material-theme",
+			"pkief.material-icon-theme",
+			"oderwat.indent-rainbow",
+			"mechatroner.rainbow-csv",
+			"ms-vscode.hexeditor",
+			// Documentation
+			"njpwerner.autodocstring",
+			"davidanson.vscode-markdownlint",
+			"yzhang.markdown-all-in-one",
+			// Docker & Containers
+			"ms-vscode-remote.remote-containers",
+			"ms-azuretools.vscode-docker",
+			// Jupyter (core only, no AI)
+			"ms-toolsai.jupyter",
+			"ms-toolsai.jupyter-renderers",
+			// Command Line Tools
+			"ms-vscode.vscode-json",
+			"redhat.vscode-yaml",
+			"ms-vscode.makefile-tools"
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Run Kalman Simulation",
+				"type": "shell",
+				"command": "python",
+				"args": [
+					"kalman_sim.py",
+					"--workers",
+					"7"
+				],
+				"group": "build",
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Run Tests",
+				"type": "shell",
+				"command": "python",
+				"args": [
+					"-m",
+					"pytest",
+					"-v"
+				],
+				"group": "test",
+				"problemMatcher": []
+			},
+			{
+				"label": "Format Code",
+				"type": "shell",
+				"command": "black",
+				"args": [
+					"."
+				],
+				"group": "build",
+				"problemMatcher": []
+			},
+			{
+				"label": "Docker Build",
+				"type": "shell",
+				"command": "docker",
+				"args": [
+					"build",
+					"-t",
+					"kalman-filter",
+					"."
+				],
+				"group": "build",
+				"problemMatcher": []
+			},
+			{
+				"label": "Start Jupyter Lab",
+				"type": "shell",
+				"command": "jupyter",
+				"args": [
+					"lab",
+					"--no-browser",
+					"--port=8888"
+				],
+				"group": "build",
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "dedicated"
+				}
+			},
+			{
+				"label": "Convert Notebook to Script",
+				"type": "shell",
+				"command": "jupyter",
+				"args": [
+					"nbconvert",
+					"--to",
+					"script",
+					"${file}"
+				],
+				"group": "build"
+			},
+			{
+				"label": "Claude Code: Generate Tests",
+				"type": "shell",
+				"command": "claude",
+				"args": [
+					"code",
+					"generate",
+					"tests",
+					"--file",
+					"${file}",
+					"--output",
+					"tests/"
+				],
+				"group": "test",
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Claude Code: Explain Code",
+				"type": "shell",
+				"command": "claude",
+				"args": [
+					"code",
+					"explain",
+					"${file}"
+				],
+				"group": "build",
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Claude Code: Optimize Function",
+				"type": "shell",
+				"command": "claude",
+				"args": [
+					"code",
+					"optimize",
+					"--selection",
+					"${selectedText}",
+					"--context",
+					"multi-agent-rl"
+				],
+				"group": "build",
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Claude Code: Review Changes",
+				"type": "shell",
+				"command": "claude",
+				"args": [
+					"code",
+					"review",
+					"--git-diff"
+				],
+				"group": "test",
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Claude Code: Add Documentation",
+				"type": "shell",
+				"command": "claude",
+				"args": [
+					"code",
+					"document",
+					"${file}",
+					"--style",
+					"google"
+				],
+				"group": "build",
+				"problemMatcher": []
+			},
+			{
+				"label": "Claude Code: Debug Session",
+				"type": "shell",
+				"command": "claude",
+				"args": [
+					"code",
+					"debug",
+					"--error-log",
+					"${workspaceFolder}/logs/error.log",
+					"--context",
+					"multi-agent-orchestration"
+				],
+				"group": "test",
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": true,
+					"panel": "dedicated"
+				}
+			}
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug Kalman Filter",
+				"type": "python",
+				"request": "launch",
+				"program": "${workspaceFolder}/main.py",
+				"console": "integratedTerminal",
+				"args": [
+					"--debug",
+					"--workers",
+					"1"
+				],
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}"
+				}
+			},
+			{
+				"name": "Debug Current File",
+				"type": "python",
+				"request": "launch",
+				"program": "${file}",
+				"console": "integratedTerminal"
+			},
+			{
+				"name": "Run Monte Carlo Study",
+				"type": "python",
+				"request": "launch",
+				"program": "${workspaceFolder}/monte_carlo.py",
+				"console": "integratedTerminal",
+				"args": [
+					"--runs",
+					"1000",
+					"--output",
+					"results/"
+				]
+			},
+			{
+				"name": "Debug Multi-Agent Simulation",
+				"type": "python",
+				"request": "launch",
+				"program": "${workspaceFolder}/multi_agent_sim.py",
+				"console": "integratedTerminal",
+				"args": [
+					"--agents",
+					"5",
+					"--debug",
+					"--log-level",
+					"DEBUG"
+				],
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}",
+					"WANDB_MODE": "offline"
+				}
+			}
+		]
+	}
 }
