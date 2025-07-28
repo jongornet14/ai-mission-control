@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from enum import Enum
 import time
 
-
 class ParameterType(Enum):
     """Types of parameters for optimization"""
 
@@ -40,19 +39,20 @@ class ParameterSpace:
         if self.param_type == ParameterType.CONTINUOUS:
             if self.log_scale:
                 log_min, log_max = np.log(self.bounds[0]), np.log(self.bounds[1])
-                samples = torch.exp(torch.uniform(log_min, log_max, (n_samples,)))
+                samples = torch.exp((log_max-log_min)*torch.rand(size=(n_samples,))+log_max)
             else:
-                samples = torch.uniform(self.bounds[0], self.bounds[1], (n_samples,))
+                samples = (self.bounds[1] - self.bounds[0])*torch.rand(size=(n_samples,))+self.bounds[0]
         elif self.param_type == ParameterType.DISCRETE:
+            # FIXED: Sample indices (0, 1, 2, ...) not values
             indices = torch.randint(0, len(self.bounds), (n_samples,))
-            samples = torch.tensor(
-                [self.bounds[i] for i in indices], dtype=torch.float32
-            )
+            samples = indices.float()  # Store as float indices
         else:  # CATEGORICAL
+            # FIXED: Sample indices (0, 1, 2, ...) not values
             indices = torch.randint(0, len(self.bounds), (n_samples,))
-            samples = torch.tensor(indices, dtype=torch.float32)  # Encoded as indices
+            samples = indices.float()  # Store as float indices
 
         return samples
+
 
 
 @dataclass
@@ -269,10 +269,15 @@ class BayesianOptimizationManager:
             value = params[i].item()
 
             if space.param_type == ParameterType.CATEGORICAL:
-                config[space.name] = space.bounds[int(value)]
+                # FIXED: value is now an index, clamp it to valid range
+                idx = max(0, min(len(space.bounds) - 1, int(value)))
+                config[space.name] = space.bounds[idx]
             elif space.param_type == ParameterType.DISCRETE:
-                config[space.name] = space.bounds[int(value)]
-            else:
+                # FIXED: value is now an index, clamp it to valid range
+                idx = max(0, min(len(space.bounds) - 1, int(value)))
+                config[space.name] = space.bounds[idx]
+            else:  # CONTINUOUS
+                # Continuous parameters stay the same
                 config[space.name] = value
 
         return config
@@ -477,10 +482,13 @@ class BayesianOptimizationManager:
             value = config[space.name]
 
             if space.param_type == ParameterType.CATEGORICAL:
+                # FIXED: Store index, not value
                 param_tensor[i] = space.bounds.index(value)
             elif space.param_type == ParameterType.DISCRETE:
+                # FIXED: Store index, not value
                 param_tensor[i] = space.bounds.index(value)
-            else:
+            else:  # CONTINUOUS
+                # Continuous parameters store the actual value
                 param_tensor[i] = value
 
         return param_tensor

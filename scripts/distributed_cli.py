@@ -163,14 +163,14 @@ class DistributedCLI:
                     print(f"   Last Heartbeat: {last_heartbeat}")
                     
             except Exception as e:
-                print(f"   ❌ Error reading coordinator status: {e}")
+                print(f"   Error reading coordinator status: {e}")
         else:
-            print("   ⚠️  No coordinator status found (may still be starting)")
+            print("   No coordinator status found (may still be starting)")
     
     def _show_worker_status(self):
         """Show worker status details"""
         worker_logs_dir = self.shared_dir / "worker_logs"
-        print(f"\n👥 Worker Status:")
+        print(f"\nWorker Status:")
         
         if worker_logs_dir.exists():
             workers = list(worker_logs_dir.glob("worker_*"))
@@ -192,15 +192,15 @@ class DistributedCLI:
                         print(f"   Worker {worker_id}: {status} "
                               f"(Episode {episode}, Avg Reward: {avg_reward:.2f})")
                     except Exception as e:
-                        print(f"   Worker {worker_id}: ❌ Error reading status - {e}")
+                        print(f"   Worker {worker_id}: Error reading status - {e}")
                 else:
-                    print(f"   Worker {worker_id}: ⚠️  No status file (may be starting)")
+                    print(f"   Worker {worker_id}: No status file (may be starting)")
         else:
-            print("   ⚠️  No worker logs directory found")
+            print("   No worker logs directory found")
     
     def _show_shared_directory_info(self):
         """Show shared directory structure and contents"""
-        print(f"\n📁 Shared Directory Info:")
+        print(f"\nShared Directory Info:")
         
         if self.shared_dir.exists():
             print(f"   Location: {self.shared_dir}")
@@ -215,14 +215,14 @@ class DistributedCLI:
                 else:
                     print(f"   {subdir}/: Not created yet")
         else:
-            print("   ⚠️  Shared directory doesn't exist")
+            print("   Shared directory doesn't exist")
     
     def logs(self, service=None, follow=False, tail=50):
         """Show logs from services"""
         if service:
-            print(f"📋 Showing logs for {service}...")
+            print(f"Showing logs for {service}...")
         else:
-            print("📋 Showing logs from all services...")
+            print("Showing logs from all services...")
         
         try:
             cmd = ["docker-compose", "-f", self.compose_file, "logs"]
@@ -248,13 +248,13 @@ class DistributedCLI:
                     print("STDERR:", result.stderr)
                     
         except KeyboardInterrupt:
-            print("\n🛑 Log following stopped")
+            print("\nLog following stopped")
         except Exception as e:
-            print(f"❌ Error showing logs: {e}")
+            print(f"Error showing logs: {e}")
     
     def cleanup(self):
         """Clean up all resources"""
-        print("🧹 Cleaning up distributed training...")
+        print("Cleaning up distributed training...")
         
         # Stop containers
         self.stop_training()
@@ -264,19 +264,19 @@ class DistributedCLI:
         if self.shared_dir.exists():
             try:
                 shutil.rmtree(self.shared_dir)
-                print(f"✅ Removed {self.shared_dir}")
+                print(f"Removed {self.shared_dir}")
             except Exception as e:
-                print(f"❌ Error removing shared directory: {e}")
+                print(f"Error removing shared directory: {e}")
         
         # Remove compose file
         if Path(self.compose_file).exists():
             try:
                 Path(self.compose_file).unlink()
-                print(f"✅ Removed {self.compose_file}")
+                print(f"Removed {self.compose_file}")
             except Exception as e:
-                print(f"❌ Error removing compose file: {e}")
+                print(f"Error removing compose file: {e}")
         
-        print("✅ Cleanup completed")
+        print("Cleanup completed")
     
     def _is_running(self):
         """Check if training is currently running"""
@@ -341,7 +341,7 @@ Examples:
         if args.command == 'start':
             success = cli.start_training(args.workers, args.env, args.force)
             if success:
-                print(f"\n💡 Next steps:")
+                print(f"\nNext steps:")
                 print(f"   python scripts/distributed_cli.py status    # Check progress")
                 print(f"   python scripts/distributed_cli.py logs -f   # Follow logs")
         elif args.command == 'stop':
@@ -353,9 +353,9 @@ Examples:
         elif args.command == 'cleanup':
             cli.cleanup()
     except KeyboardInterrupt:
-        print(f"\n🛑 Command interrupted")
+        print(f"\nCommand interrupted")
     except Exception as e:
-        print(f"💥 Unexpected error: {e}")
+        print(f"Unexpected error: {e}")
 
 
 if __name__ == "__main__":

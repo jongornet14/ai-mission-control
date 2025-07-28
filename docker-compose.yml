@@ -1,6 +1,6 @@
 # Complete AI Mission Control - Distributed Training + Development
 # Architecture: 1 Coordinator + N Workers + Development Container
-# Uses simple inheritance: DistributedWorker(BaseWorker)
+# Uses JSON configs with Bayesian Optimization
 
 services:
   # Distributed Training Services
@@ -18,15 +18,26 @@ services:
       - ./distributed_shared:/workspace/distributed_shared
       - ./logs:/workspace/logs
       - .:/workspace/project
+      # Mount config files
+      - ./configs:/workspace/configs
     working_dir: /workspace/project
     command: >
+      bash -c "
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
       python scripts/coordinator_entry.py
       --shared_dir /workspace/distributed_shared
-      --num_workers 2
+      --config /workspace/configs/${CONFIG_FILE:-cartpole_distributed.json}
       --check_interval 30
+      "
     networks:
       - rl-training
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-f", "/workspace/distributed_shared/coordinator_status.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   worker-0:
     build:
@@ -37,23 +48,31 @@ services:
     environment:
       - PYTHONPATH=/workspace/project
       - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./logs:/workspace/logs
       - .:/workspace/project
     working_dir: /workspace/project
+    # Updated to use config files instead of CLI args
     command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_0_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
       python scripts/worker_entry.py 
       --worker_id 0 
-      --shared_dir /workspace/distributed_shared 
-      --env ${ENV:-CartPole-v1} 
-      --max_episodes 1000 
-      --sync_frequency 10
+      --shared_dir /workspace/distributed_shared
+      "
     networks:
       - rl-training
     depends_on:
-      - coordinator
+      coordinator:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -72,23 +91,31 @@ services:
     environment:
       - PYTHONPATH=/workspace/project
       - CUDA_VISIBLE_DEVICES=0
-      - ENV=${ENV:-CartPole-v1}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./logs:/workspace/logs
       - .:/workspace/project
     working_dir: /workspace/project
+    # Updated to use config files instead of CLI args
     command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_1_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
       python scripts/worker_entry.py
       --worker_id 1
       --shared_dir /workspace/distributed_shared
-      --env ${ENV:-CartPole-v1}
-      --max_episodes 1000
-      --sync_frequency 10
+      "
     networks:
       - rl-training
     depends_on:
-      - coordinator
+      coordinator:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -112,6 +139,7 @@ services:
     volumes:
       - ./:/workspace/project
       - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
       - ai_mc_experiments:/workspace/experiments
       - ai_mc_logs:/workspace/logs
       - ai_mc_models:/workspace/models
@@ -120,12 +148,16 @@ services:
       - "8888:8888"  # Alternative Jupyter port
     working_dir: /workspace/project
     command: >
+      bash -c "
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
       jupyter lab 
       --ip=0.0.0.0 
       --port=8080 
       --no-browser 
       --allow-root
       --notebook-dir=/workspace
+      "
     networks:
       - rl-training
     deploy:
@@ -156,6 +188,8 @@ services:
       echo 'Waiting for log directories...' &&
       sleep 15 &&
       echo 'Starting TensorBoard...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
       if [ -d '/workspace/distributed_shared/worker_logs' ]; then
         tensorboard --logdir=/workspace/distributed_shared/worker_logs --host=0.0.0.0 --port=6006 --reload_interval=30;
       else
@@ -181,6 +215,7 @@ services:
     volumes:
       - ./:/workspace/project
       - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
       - ai_mc_experiments:/workspace/experiments
       - ai_mc_logs:/workspace/logs
       - ai_mc_models:/workspace/models
