@@ -1,67 +1,57 @@
-version: '3.8'
+# Complete AI Mission Control - Distributed Training + Development
+# Architecture: 1 Coordinator + N Workers + Development Container
+# Uses simple inheritance: DistributedWorker(BaseWorker)
 
 services:
-  ai-mission-control:
-    image: ai-mission-control:latest
-    container_name: ai-mission-control
-    volumes:
-      - ./:/workspace/project
-      - ai_mc_experiments:/workspace/experiments
-      - ai_mc_logs:/workspace/logs
-      - ai_mc_models:/workspace/models
-    ports:
-      - "8080:8080"  # Jupyter Lab
-      - "8888:8888"  # Alternative Jupyter port
-      - "6006:6006"  # TensorBoard
-    environment:
-      - CUDA_VISIBLE_DEVICES=0
-      - PYTHONPATH=/workspace/project
-      - NVIDIA_VISIBLE_DEVICES=all
-    stdin_open: true
-    tty: true
-    runtime: nvidia
-
+  # Distributed Training Services
   coordinator:
-    image: ai-mission-control:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: rl-coordinator
-    entrypoint: ["/bin/bash", "-c"]
+    entrypoint: ""
     environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=""  # Coordinator doesn't need GPU
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=""
+      - NUM_WORKERS=2
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      "source /opt/miniforge/etc/profile.d/conda.sh &&
-      conda activate automl &&
-      python -m intellinaut.workers.coordinator
+      python scripts/coordinator_entry.py
       --shared_dir /workspace/distributed_shared
-      --num_workers 4
-      --check_interval 30"
+      --num_workers 2
+      --check_interval 30
+    networks:
+      - rl-training
     restart: unless-stopped
 
   worker-0:
-    image: ai-mission-control:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: rl-worker-0
-    entrypoint: ["/bin/bash", "-c"]
+    entrypoint: ""
     environment:
-      - PYTHONPATH=/workspace/project:/workspace
+      - PYTHONPATH=/workspace/project
       - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      "source /opt/miniforge/etc/profile.d/conda.sh &&
-      conda activate automl &&
-      python -m intellinaut.workers.distributed
-      --worker_id 0
-      --shared_dir /workspace/distributed_shared
-      --max_episodes 1000
-      --env ${ENV:-CartPole-v1}
-      --device cuda:0"
+      python scripts/worker_entry.py 
+      --worker_id 0 
+      --shared_dir /workspace/distributed_shared 
+      --env ${ENV:-CartPole-v1} 
+      --max_episodes 1000 
+      --sync_frequency 10
+    networks:
+      - rl-training
     depends_on:
       - coordinator
     restart: unless-stopped
@@ -74,26 +64,29 @@ services:
               capabilities: [gpu]
 
   worker-1:
-    image: ai-mission-control:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: rl-worker-1
-    entrypoint: ["/bin/bash", "-c"]
+    entrypoint: ""
     environment:
-      - PYTHONPATH=/workspace/project:/workspace
-      - CUDA_VISIBLE_DEVICES=0  # Both workers can share GPU for testing
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
       - ENV=${ENV:-CartPole-v1}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
       - .:/workspace/project
     working_dir: /workspace/project
     command: >
-      "source /opt/miniforge/etc/profile.d/conda.sh &&
-      conda activate automl &&
-      python -m intellinaut.workers.distributed
+      python scripts/worker_entry.py
       --worker_id 1
       --shared_dir /workspace/distributed_shared
-      --max_episodes 1000
       --env ${ENV:-CartPole-v1}
-      --device cuda:0"
+      --max_episodes 1000
+      --sync_frequency 10
+    networks:
+      - rl-training
     depends_on:
       - coordinator
     restart: unless-stopped
@@ -105,29 +98,109 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
 
-  tensorboard-distributed:
-    image: ai-mission-control:latest
-    container_name: rl-tensorboard-distributed
-    entrypoint: ["/bin/bash", "-c"]
+  # Development & Monitoring Services
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-mc-jupyter
+    entrypoint: ""
     environment:
-      - PYTHONPATH=/workspace
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./:/workspace/project
+      - ./distributed_shared:/workspace/distributed_shared
+      - ai_mc_experiments:/workspace/experiments
+      - ai_mc_logs:/workspace/logs
+      - ai_mc_models:/workspace/models
+    ports:
+      - "8080:8080"  # Jupyter Lab
+      - "8888:8888"  # Alternative Jupyter port
+    working_dir: /workspace/project
+    command: >
+      jupyter lab 
+      --ip=0.0.0.0 
+      --port=8080 
+      --no-browser 
+      --allow-root
+      --notebook-dir=/workspace
+    networks:
+      - rl-training
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  tensorboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-mc-tensorboard
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
+      - ai_mc_experiments:/workspace/experiments
+      - ai_mc_logs:/workspace/logs
+    ports:
+      - "6006:6006"  # TensorBoard
+    working_dir: /workspace
     command: >
-      "source /opt/miniforge/etc/profile.d/conda.sh &&
-      conda activate automl &&
+      bash -c "
       echo 'Waiting for log directories...' &&
       sleep 15 &&
+      echo 'Starting TensorBoard...' &&
       if [ -d '/workspace/distributed_shared/worker_logs' ]; then
-        echo 'Starting TensorBoard for distributed training...';
-        tensorboard --logdir=/workspace/distributed_shared/worker_logs --host=0.0.0.0 --port=6007 --reload_interval=30;
+        tensorboard --logdir=/workspace/distributed_shared/worker_logs --host=0.0.0.0 --port=6006 --reload_interval=30;
       else
-        echo 'No worker logs found yet, starting with distributed_shared...';
-        tensorboard --logdir=/workspace/distributed_shared --host=0.0.0.0 --port=6007 --reload_interval=30;
-      fi"
-    ports:
-      - "6007:6007"
-    restart: unless-stopped
+        tensorboard --logdir=/workspace/distributed_shared --host=0.0.0.0 --port=6006 --reload_interval=30;
+      fi
+      "
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+
+  # Development Container (for debugging, manual work)
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-mc-dev
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./:/workspace/project
+      - ./distributed_shared:/workspace/distributed_shared
+      - ai_mc_experiments:/workspace/experiments
+      - ai_mc_logs:/workspace/logs
+      - ai_mc_models:/workspace/models
+    working_dir: /workspace/project
+    command: tail -f /dev/null  # Keeps container running for exec access
+    stdin_open: true
+    tty: true
+    networks:
+      - rl-training
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+networks:
+  rl-training:
+    driver: bridge
 
 volumes:
   ai_mc_experiments:
