@@ -1,3 +1,0 @@
-global_step,episode,step,timestamp,elapsed_time,worker_id,environment,device,obs_space_shape,action_space_type,action_space_size,system_cpu_percent,system_memory_percent,system_memory_available_gb,system_disk_free_gb,gpu_memory_gb,gpu_memory_max_gb,checkpoint_saved,checkpoint_episode,avg_reward,reward_change,model_file
-0,0,0,1752789085.1853757,1.1582012176513672,99.0,CartPole-v1,cuda:0,"(4,)",<class 'gym.spaces.discrete.Discrete'>,2.0,9.2,59.2,25.512039184570312,206.6015167236328,0.0005035400390625,0.0005035400390625,,,,,
-1,0,1,1752789085.4233627,1.3961880207061768,,,,,,,5.9,59.7,25.203933715820312,206.6009979248047,0.008438587188720703,0.009417057037353516,True,0.0,0.0,0.0,/workspace/distributed_shared/models/worker_99_episode_0.pt

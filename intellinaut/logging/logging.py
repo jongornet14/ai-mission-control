@@ -51,8 +51,10 @@ class CrazyLogger:
         self.current_step = 0
         self.global_step = 0
 
-        print(f"🚀 CrazyLogger initialized: {self.log_dir}")
-        print(f"📊 TensorBoard: tensorboard --logdir {self.log_dir / 'tensorboard'}")
+        print(f"\033[92mCrazyLogger initialized: {self.log_dir}\033[0m")
+        print(
+            f"\033[94mTensorBoard: tensorboard --logdir {self.log_dir / 'tensorboard'}\033[0m"
+        )
 
     def setup_directories(self):
         """Create comprehensive directory structure"""
@@ -189,6 +191,11 @@ class CrazyLogger:
 
             model_data["model_path"] = str(model_path)
 
+            # Log which model is being saved
+            print(
+                f"\033[93mModel saved: {model_path.name} (Episode: {self.current_episode})\033[0m"
+            )
+
         # Log gradient norms
         if hasattr(model, "parameters"):
             grad_norms = self.calculate_gradient_norms(model)
@@ -264,7 +271,9 @@ class CrazyLogger:
         try:
             import imageio
         except ImportError:
-            print(" imageio not installed. Install with: pip install imageio[ffmpeg]")
+            print(
+                "\033[91mimageio not installed. Install with: pip install imageio[ffmpeg]\033[0m"
+            )
             return
 
         # Create videos directory
@@ -314,7 +323,7 @@ class CrazyLogger:
                 self.log_step(video_path=str(video_path))
 
         except Exception as e:
-            print(f" Video save failed: {e}")
+            print(f"\033[91mVideo save failed: {e}\033[0m")
             import traceback
 
             traceback.print_exc()
@@ -496,7 +505,7 @@ class CrazyLogger:
         if self.hyperparams_history:
             self.plot_hyperparameter_evolution()
 
-        print(f"📊 Analysis plots saved to: {self.log_dir / 'analysis'}")
+        print(f"\033[94mAnalysis plots saved to: {self.log_dir / 'analysis'}\033[0m")
 
     def plot_hyperparameter_evolution(self):
         """Plot how hyperparameters evolved over time"""
@@ -572,10 +581,17 @@ class CrazyLogger:
         with open(self.log_dir / "experiment_summary.json", "w") as f:
             json.dump(summary, f, indent=2, default=str)
 
-        print(f"\n🎯 Final Report Generated!")
-        print(f"📊 Summary: {self.log_dir / 'experiment_summary.json'}")
-        print(f"📈 Analysis: {self.log_dir / 'analysis'}")
-        print(f"📋 Data: {self.log_dir / 'metrics'}")
+        # Log which model ID is being used in the final report
+        if self.model_checkpoints:
+            last_model = self.model_checkpoints[-1]
+            print(
+                f"\033[93mFinal model used: {last_model.get('model_path', 'Unknown')}\033[0m"
+            )
+
+        print(f"\n\033[92mFinal Report Generated!\033[0m")
+        print(f"\033[94mSummary: {self.log_dir / 'experiment_summary.json'}\033[0m")
+        print(f"\033[94mAnalysis: {self.log_dir / 'analysis'}\033[0m")
+        print(f"\033[94mData: {self.log_dir / 'metrics'}\033[0m")
 
         return summary
 
@@ -583,7 +599,7 @@ class CrazyLogger:
         """Close logger and clean up"""
         self.tb_writer.close()
         self.generate_final_report()
-        print(f"🔒 CrazyLogger closed. Data saved to: {self.log_dir}")
+        print(f"\033[92mCrazyLogger closed. Data saved to: {self.log_dir}\033[0m")
 
 
 class PerformanceTracker:

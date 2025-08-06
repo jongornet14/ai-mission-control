@@ -472,6 +472,12 @@ class BaseWorker:
                 # Train on episode
                 train_metrics = self.train_on_episode(episode_result["episode_data"])
 
+                if hasattr(self, "crazy_logger") and hasattr(
+                    self.algorithm, "get_hyperparameters"
+                ):
+                    hyperparams = self.algorithm.get_hyperparameters()
+                    self.crazy_logger.log_hyperparameters(hyperparams)
+
                 # Store episode stats
                 self.episode_rewards.append(episode_reward)
                 self.episode_lengths.append(episode_length)

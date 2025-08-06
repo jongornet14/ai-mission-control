@@ -1,7 +1,0 @@
-{
-  "experiment_name": "distributed_worker_0",
-  "total_episodes": 284,
-  "total_steps": 38087,
-  "total_time": 94.12654256820679,
-  "log_directory": "/workspace/distributed_shared/worker_logs/worker_0"
-}

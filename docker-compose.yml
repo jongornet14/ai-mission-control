@@ -13,7 +13,7 @@ services:
     environment:
       - PYTHONPATH=/workspace/project
       - CUDA_VISIBLE_DEVICES=""
-      - NUM_WORKERS=2
+      - NUM_WORKERS=${NUM_WORKERS:-2}
     volumes:
       - ./distributed_shared:/workspace/distributed_shared
       - ./logs:/workspace/logs
@@ -28,6 +28,7 @@ services:
       python scripts/coordinator_entry.py
       --shared_dir /workspace/distributed_shared
       --config /workspace/configs/${CONFIG_FILE:-cartpole_distributed.json}
+      --num_workers ${NUM_WORKERS:-2}
       --check_interval 30
       "
     networks:
@@ -109,6 +110,426 @@ services:
       conda activate automl &&
       python scripts/worker_entry.py
       --worker_id 1
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-2
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_2_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 2
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-3
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_3_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 3
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-4
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_4_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 4
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-5
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_5_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 5
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-6:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-6
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_6_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 6
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-7:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-7
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_7_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 7
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-8:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-8
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_8_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 8
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-9:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-9
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_9_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 9
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-10:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-10
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_10_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 10
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  worker-11:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-worker-11
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      echo 'Waiting for coordinator to generate configs...' &&
+      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_11_config.json' ]; do
+        echo 'Config not ready, waiting 10s...' &&
+        sleep 10;
+      done &&
+      echo 'Config found, starting worker...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py
+      --worker_id 11
       --shared_dir /workspace/distributed_shared
       "
     networks:

@@ -19,6 +19,19 @@ from collections import deque
 from .distributed import DistributedWorker
 
 
+def colored(text: str, color: str) -> str:
+    """Custom function for colored output using ANSI escape codes."""
+    colors = {
+        "green": "\033[92m",
+        "cyan": "\033[96m",
+        "yellow": "\033[93m",
+        "blue": "\033[94m",
+        "white": "\033[97m",
+        "reset": "\033[0m",
+    }
+    return f"{colors.get(color, colors['reset'])}{text}{colors['reset']}"
+
+
 class AdaptiveWorker(DistributedWorker):
     """
     Adaptive Worker with Dynamic Network Architecture Morphing
@@ -75,34 +88,15 @@ class AdaptiveWorker(DistributedWorker):
             "convergence_speed": deque(maxlen=self.performance_window),
         }
 
-        # Morphing configuration (loaded from coordinator config)
-        self.morphing_config = {
-            "enabled": True,
-            "frequency_episodes": 100,
-            "metrics": ["reward_trend", "loss_trend"],
-            "thresholds": {
-                "reward_improvement": 0.1,
-                "reward_decline": -0.2,
-                "loss_stagnation": 0.05,
-            },
-            "constraints": {
-                "max_layers": 5,
-                "max_neurons_per_layer": 512,
-                "min_layers": 2,
-                "min_neurons_per_layer": 16,
-            },
-            "architecture_options": [
-                [32, 32],
-                [64, 64],
-                [128, 64],
-                [256, 128],
-                [128, 128],
-                [64, 32],
-                [256, 256],
-                [512, 256],
-                [256, 128, 64],
-            ],
-        }
+        # Load morphing configuration from JSON
+        morphing_config_path = Path("configs/morphing_configs/ppo_morphing_config.json")
+        if morphing_config_path.exists():
+            with open(morphing_config_path, "r") as f:
+                self.morphing_config = json.load(f)
+        else:
+            raise FileNotFoundError(
+                f"Morphing config file not found: {morphing_config_path}"
+            )
 
         # Shared directory for architecture data
         self.arch_dir = self.shared_dir / "architectures"
@@ -114,11 +108,20 @@ class AdaptiveWorker(DistributedWorker):
 
         self._update_status("ADAPTIVE_INIT", morphing_enabled=morphing_enabled)
 
-        print(f"🧬 AdaptiveWorker {worker_id} initialized")
-        print(f"🔄 Morphing frequency: {morphing_frequency} episodes")
+        print(colored(f"AdaptiveWorker {worker_id} initialized", "green"))
+        print(colored(f"Morphing frequency: {morphing_frequency} episodes", "cyan"))
         print(
-            f"📐 Architecture morphing: {'ENABLED' if morphing_enabled else 'DISABLED'}"
+            colored(
+                f"Architecture morphing: {'ENABLED' if morphing_enabled else 'DISABLED'}",
+                "yellow",
+            )
         )
+
+    def explain_morphing_configs(self):
+        """Helper to explain available morphing configurations."""
+        print(colored("Available Morphing Configurations:", "blue"))
+        for key, value in self.morphing_config.items():
+            print(colored(f"{key}: {value}", "white"))
 
     def _apply_config_updates(self):
         """Apply configuration updates including morphing settings"""
@@ -288,7 +291,7 @@ class AdaptiveWorker(DistributedWorker):
 
         if not valid_options:
             print(
-                f"⚠️ Worker {self.worker_id}: No valid architecture options, keeping current"
+                f"Warning: Worker {self.worker_id}: No valid architecture options, keeping current"
             )
             return current_arch
 
@@ -299,7 +302,9 @@ class AdaptiveWorker(DistributedWorker):
         valid_options = [arch for arch in valid_options if arch != current_arch_clean]
 
         if not valid_options:
-            print(f"⚠️ Worker {self.worker_id}: All options exhausted, keeping current")
+            print(
+                f"Warning: Worker {self.worker_id}: All options exhausted, keeping current"
+            )
             return current_arch
 
         # Selection strategy based on reason
@@ -661,7 +666,11 @@ class AdaptiveWorker(DistributedWorker):
         self.current_architecture = self.get_current_architecture()
         arch_str = self.architecture_to_string(self.current_architecture)
 
-        print(f"📐 Worker {self.worker_id}: Initial architecture: {arch_str}")
+        print(
+            colored(
+                f"Worker {self.worker_id}: Initial architecture: {arch_str}", "cyan"
+            )
+        )
 
         # Log initial architecture
         arch_log = {
@@ -680,7 +689,10 @@ class AdaptiveWorker(DistributedWorker):
         Main training loop with adaptive architecture morphing
         """
         print(
-            f"🧬 AdaptiveWorker {self.worker_id}: Starting adaptive distributed training"
+            colored(
+                f"AdaptiveWorker {self.worker_id}: Starting adaptive distributed training",
+                "green",
+            )
         )
 
         # Load any existing successful architectures
@@ -691,12 +703,25 @@ class AdaptiveWorker(DistributedWorker):
             super().run(env_name=env_name, device=device, lr=lr)
 
             # Additional completion logging for adaptive features
-            print(f"AdaptiveWorker {self.worker_id}: Adaptive training completed!")
-            print(f"Total architecture morphs: {self.morphing_count}")
             print(
-                f"Final architecture: {self.architecture_to_string(self.get_current_architecture())}"
+                colored(
+                    f"AdaptiveWorker {self.worker_id}: Adaptive training completed!",
+                    "green",
+                )
             )
-            print(f"Architectures tested: {len(self.architecture_performance)}")
+            print(colored(f"Total architecture morphs: {self.morphing_count}", "cyan"))
+            print(
+                colored(
+                    f"Final architecture: {self.architecture_to_string(self.get_current_architecture())}",
+                    "cyan",
+                )
+            )
+            print(
+                colored(
+                    f"Architectures tested: {len(self.architecture_performance)}",
+                    "cyan",
+                )
+            )
 
         finally:
             # Save final architecture performance data

@@ -8,6 +8,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import math
+import logging
+
 
 class PPOAlgorithm:
     """Simple PPO Algorithm using plain PyTorch"""
@@ -246,7 +249,7 @@ class PPOAlgorithm:
 
     def get_hyperparameters(self):
         """Get current hyperparameters for logging"""
-        return {
+        params = {
             "learning_rate": self.learning_rate,
             "gamma": self.gamma,
             "lambda_gae": self.lambda_gae,
@@ -255,6 +258,10 @@ class PPOAlgorithm:
             "critic_coef": self.critic_coef,
             "batch_size": self.batch_size,
         }
+        for k, v in params.items():
+            if not isinstance(v, (int, float)) or math.isnan(v) or math.isinf(v):
+                logging.warning(f"[PPO] Hyperparameter '{k}' has suspicious value: {v}")
+        return params
 
     def update_hyperparameters(self, new_hyperparams):
         """Update hyperparameters during training"""

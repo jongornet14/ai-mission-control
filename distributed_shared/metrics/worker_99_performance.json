@@ -1,9 +1,0 @@
-{
-  "worker_id": 99,
-  "total_episodes": 0,
-  "avg_reward": 0,
-  "reward_change": 0.0,
-  "episode_rewards": [],
-  "timestamp": 1752789085.4232073,
-  "training_time": 1.3972704410552979
-}
