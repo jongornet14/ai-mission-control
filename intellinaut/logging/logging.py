@@ -141,6 +141,22 @@ class CrazyLogger:
 
     def log_hyperparameters(self, hyperparams, performance_metric=None):
         """Log hyperparameter changes"""
+        if not hyperparams:
+            print(
+                "\033[91m[CrazyLogger] WARNING: log_hyperparameters called with empty dict!\033[0m"
+            )
+        else:
+            print(
+                f"\033[93m[CrazyLogger] Logging hyperparameters at episode {self.current_episode}: {hyperparams}\033[0m"
+            )
+            for key, value in hyperparams.items():
+                if not isinstance(value, (int, float, np.number)) or (
+                    isinstance(value, float) and (np.isnan(value) or np.isinf(value))
+                ):
+                    print(
+                        f"\033[91m[CrazyLogger] WARNING: Hyperparameter '{key}' has suspicious value: {value}\033[0m"
+                    )
+
         hyperparam_entry = {
             "episode": self.current_episode,
             "global_step": self.global_step,
@@ -155,7 +171,7 @@ class CrazyLogger:
         for key, value in hyperparams.items():
             if isinstance(value, (int, float, np.number)):
                 self.tb_writer.add_scalar(
-                    f"hyperparams/{key}", value, self.current_episode
+                    f"episode/hyperparams/{key}", value, self.current_episode
                 )
 
         # Save hyperparameter history

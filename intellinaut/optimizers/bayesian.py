@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from enum import Enum
 import time
 import random
+import math
 
 
 class ParameterType(Enum):
@@ -42,7 +43,7 @@ class ParameterSpace:
             if self.log_scale:
                 log_min, log_max = np.log(self.bounds[0]), np.log(self.bounds[1])
                 samples = torch.exp(
-                    (log_max - log_min) * torch.rand(size=(n_samples,)) + log_max
+                    (log_max - log_min) * torch.rand(size=(n_samples,)) + log_min
                 )
             else:
                 samples = (self.bounds[1] - self.bounds[0]) * torch.rand(
@@ -206,38 +207,14 @@ class BayesianOptimizationManager:
         print(
             f"\033[94mSuggested configuration for worker {worker_id}: {next_config}\033[0m"
         )
+        print(
+            f"\033[91m[DEBUG] Suggested learning rate: {next_config.get('learning_rate')}\033[0m"
+        )
         return next_config
 
     def _create_parameter_spaces(self) -> List[ParameterSpace]:
-        """Create parameter spaces based on data dimensions"""
         spaces = []
 
-        # Architecture parameters (based on obs/action dims)
-        # spaces.append(
-        #     ParameterSpace(
-        #         name="hidden_layer_1",
-        #         param_type=ParameterType.DISCRETE,
-        #         bounds=[32, 64, 128, 256, 512, min(1024, self.obs_dim * 16)],
-        #     )
-        # )
-
-        # spaces.append(
-        #     ParameterSpace(
-        #         name="hidden_layer_2",
-        #         param_type=ParameterType.DISCRETE,
-        #         bounds=[32, 64, 128, 256, 512, min(1024, self.obs_dim * 16)],
-        #     )
-        # )
-
-        # spaces.append(
-        #     ParameterSpace(
-        #         name="num_layers",
-        #         param_type=ParameterType.DISCRETE,
-        #         bounds=[1, 2, 3, 4],
-        #     )
-        # )
-
-        # Hyperparameters
         spaces.append(
             ParameterSpace(
                 name="learning_rate",
@@ -246,7 +223,6 @@ class BayesianOptimizationManager:
                 log_scale=True,
             )
         )
-
         spaces.append(
             ParameterSpace(
                 name="batch_size",
@@ -254,13 +230,13 @@ class BayesianOptimizationManager:
                 bounds=[32, 64, 128, 256, 512],
             )
         )
-
         spaces.append(
             ParameterSpace(
-                name="gamma", param_type=ParameterType.CONTINUOUS, bounds=(0.9, 0.999)
+                name="gamma",
+                param_type=ParameterType.CONTINUOUS,
+                bounds=(0.9, 0.999),
             )
         )
-
         spaces.append(
             ParameterSpace(
                 name="entropy_coef",
@@ -268,6 +244,21 @@ class BayesianOptimizationManager:
                 bounds=(0.0, 0.1),
             )
         )
+        spaces.append(
+            ParameterSpace(
+                name="clip_range",  # This will map to clip_epsilon in PPO
+                param_type=ParameterType.CONTINUOUS,
+                bounds=(0.1, 0.3),
+            )
+        )
+        spaces.append(
+            ParameterSpace(
+                name="value_function_coef",  # This will map to critic_coef in PPO
+                param_type=ParameterType.CONTINUOUS,
+                bounds=(0.3, 1.0),
+            )
+        )
+        # Add more as needed...
 
         return spaces
 
@@ -285,44 +276,36 @@ class BayesianOptimizationManager:
         config = {}
         for i, space in enumerate(self.parameter_spaces):
             value = params[i].item()
-
             if space.param_type == ParameterType.CATEGORICAL:
-                # FIXED: value is now an index, clamp it to valid range
                 idx = max(0, min(len(space.bounds) - 1, int(value)))
                 config[space.name] = space.bounds[idx]
             elif space.param_type == ParameterType.DISCRETE:
-                # FIXED: value is now an index, clamp it to valid range
                 idx = max(0, min(len(space.bounds) - 1, int(value)))
                 config[space.name] = space.bounds[idx]
             else:  # CONTINUOUS
-                # Continuous parameters stay the same
-                config[space.name] = value
+                min_val, max_val = space.bounds
+                config[space.name] = max(min_val, min(value, max_val))
 
         return config
 
-    def expected_improvement(self, X: Tensor, best_f: float) -> Tensor:
-        """Expected Improvement acquisition function"""
-        if len(self.evaluated_params) < self.config.n_initial_random:
-            # Random exploration initially
-            return torch.rand(X.shape[0])
-
-        mean, variance = self.gp.predict(X)
-        std = torch.sqrt(variance + 1e-8)  # Numerical stability
-
-        # Expected improvement
-        z = (mean - best_f) / std
-        ei = (mean - best_f) * torch.distributions.Normal(0, 1).cdf(
-            z
-        ) + std * torch.distributions.Normal(0, 1).log_prob(z).exp()
-
-        return ei
+    def thompson_sampling(self, X: Tensor) -> Tensor:
+        try:
+            mean, variance = self.gp.predict(X)
+        except ValueError:  # or the specific error your GP raises
+            print(
+                "\033[93m[WARNING] GP not fitted yet: Thompson sampling is using the prior.\033[0m"
+            )
+            mean = torch.zeros(X.shape[0])
+            variance = torch.ones(X.shape[0])  # or use kernel(X, X).diagonal()
+        std = torch.sqrt(variance + 1e-8)
+        return torch.normal(mean, std)
 
     def optimize_continuous_parameters(
         self, discrete_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Optimize continuous parameters for a given discrete configuration
-        Uses denser sampling + local refinement
+        Uses only global sampling (no local refinement)
         """
         # Get continuous parameter indices
         continuous_indices = []
@@ -334,122 +317,30 @@ class BayesianOptimizationManager:
             return discrete_config
 
         # Sample densely around promising regions
-        best_candidates = []
         n_dense_samples = 5000  # Much denser for continuous params
 
         # Global sampling
         global_samples = self.sample_parameter_space(n_dense_samples)
-        global_ei = self.expected_improvement(global_samples, self.best_performance)
 
-        # Get top candidates
-        top_k = min(100, n_dense_samples // 10)
-        top_indices = torch.topk(global_ei, top_k).indices
-        top_candidates = global_samples[top_indices]
-
-        # Local refinement around best candidates
-        refined_candidates = []
-        for candidate in top_candidates[:10]:  # Refine top 10
-            local_samples = self._local_sampling_around_point(candidate, n_local=200)
-            refined_candidates.append(local_samples)
-
-        # Combine all candidates
-        all_candidates = torch.cat([top_candidates] + refined_candidates, dim=0)
-
-        # Final evaluation
-        final_ei = self.expected_improvement(all_candidates, self.best_performance)
-        best_idx = torch.argmax(final_ei)
-
-        return self.decode_parameters(all_candidates[best_idx])
-
-    def _local_sampling_around_point(
-        self, center: Tensor, n_local: int = 200, noise_scale: float = 0.1
-    ) -> Tensor:
-        """Sample locally around a promising point"""
-        local_samples = center.unsqueeze(0).repeat(n_local, 1)
-
-        for i, space in enumerate(self.parameter_spaces):
-            if space.param_type == ParameterType.CONTINUOUS:
-                if space.log_scale:
-                    log_center = torch.log(center[i])
-                    log_noise = torch.randn(n_local) * noise_scale
-                    local_samples[:, i] = torch.exp(log_center + log_noise)
-                    local_samples[:, i] = torch.clamp(
-                        local_samples[:, i], space.bounds[0], space.bounds[1]
-                    )
-                else:
-                    noise = (
-                        torch.randn(n_local)
-                        * noise_scale
-                        * (space.bounds[1] - space.bounds[0])
-                    )
-                    local_samples[:, i] = center[i] + noise
-                    local_samples[:, i] = torch.clamp(
-                        local_samples[:, i], space.bounds[0], space.bounds[1]
-                    )
-
-        return local_samples
-
-    def mutate_hyperparameters(self, target_worker):
-        """
-        Mutate the hyperparameters of the target worker.
-        """
-        try:
-            metrics_file = self.metrics_dir / f"worker_{target_worker}_performance.json"
-            if not metrics_file.exists():
-                print(
-                    f"\033[91mNo metrics file found for worker {target_worker}\033[0m"
-                )
-                return False
-
-            with open(metrics_file, "r") as f:
-                metrics = json.load(f)
-
-            # Mutate hyperparameters
-            metrics["learning_rate"] *= random.uniform(0.8, 1.2)  # Scale by 80-120%
-            metrics["learning_rate"] = max(
-                1e-5, min(metrics["learning_rate"], 1e-1)
-            )  # Clamp to [1e-5, 1e-1]
-            metrics["discount_factor"] += random.uniform(-0.01, 0.01)  # Add small noise
-            metrics["discount_factor"] = max(
-                0.9, min(metrics["discount_factor"], 0.99)
-            )  # Clamp to [0.9, 0.99]
-
-            # Save mutated hyperparameters
-            with open(metrics_file, "w") as f:
-                json.dump(metrics, f, indent=2)
-
-            print(
-                f"\033[93mMutated hyperparameters for worker {target_worker}: {metrics}\033[0m"
-            )
-            return True
-        except Exception as e:
-            print(
-                f"\033[91mError mutating hyperparameters for worker {target_worker}: {e}\033[0m"
-            )
-            return False
+        global_scores = self.thompson_sampling(global_samples)
+        best_idx = torch.argmax(global_scores)
+        return self.decode_parameters(global_samples[best_idx])
 
     def _optimize_discrete_parameters(self) -> Dict[str, Any]:
-        """Optimize discrete parameters first (smaller combinatorial space)"""
-        # Get all discrete combinations
-        discrete_combinations = self._get_discrete_combinations()
-
-        if len(self.evaluated_params) < self.config.n_initial_random:
-            # Random selection initially
-            idx = torch.randint(0, len(discrete_combinations), (1,)).item()
-            return discrete_combinations[idx]
-
-        # Evaluate each discrete combination with continuous params marginalized
-        best_discrete = None
-        best_score = float("-inf")
-
-        for discrete_combo in discrete_combinations:
-            # For each discrete combo, sample continuous params and evaluate
-            score = self._evaluate_discrete_combination(discrete_combo)
-            if score > best_score:
-                best_score = score
-                best_discrete = discrete_combo
-
-        return best_discrete
+        """Optimize discrete parameters by sampling full parameter space and picking best discrete config"""
+        n_samples = 5000
+        samples = self.sample_parameter_space(n_samples)
+        scores = self.thompson_sampling(samples)
+        best_idx = torch.argmax(scores)
+        best_sample = samples[best_idx]
+        decoded = self.decode_parameters(best_sample)
+        # Extract only the discrete/categorical part for the next step
+        discrete_config = {
+            space.name: decoded[space.name]
+            for space in self.parameter_spaces
+            if space.param_type in [ParameterType.DISCRETE, ParameterType.CATEGORICAL]
+        }
+        return discrete_config
 
     def _get_discrete_combinations(self) -> List[Dict[str, Any]]:
         """Generate all combinations of discrete parameters"""
@@ -471,53 +362,19 @@ class BayesianOptimizationManager:
 
         return combinations
 
-    def _evaluate_discrete_combination(self, discrete_config: Dict[str, Any]) -> float:
-        """Evaluate a discrete configuration by marginalizing over continuous params"""
-        # Sample continuous parameters for this discrete config
-        n_continuous_samples = 50
-        scores = []
-
-        for _ in range(n_continuous_samples):
-            # Create full config with sampled continuous params
-            full_config = discrete_config.copy()
-
-            for space in self.parameter_spaces:
-                if space.param_type == ParameterType.CONTINUOUS:
-                    if space.log_scale:
-                        log_min, log_max = np.log(space.bounds[0]), np.log(
-                            space.bounds[1]
-                        )
-                        value = np.exp(np.random.uniform(log_min, log_max))
-                    else:
-                        value = np.random.uniform(space.bounds[0], space.bounds[1])
-                    full_config[space.name] = value
-
-            # Convert to parameter tensor and evaluate
-            param_tensor = self._config_to_tensor(full_config)
-            ei_score = self.expected_improvement(
-                param_tensor.unsqueeze(0), self.best_performance
-            )
-            scores.append(ei_score.item())
-
-        return np.mean(scores)
-
     def _config_to_tensor(self, config: Dict[str, Any]) -> Tensor:
-        """Convert config dictionary to parameter tensor"""
         param_tensor = torch.zeros(self.param_dim)
-
         for i, space in enumerate(self.parameter_spaces):
             value = config[space.name]
-
             if space.param_type == ParameterType.CATEGORICAL:
-                # FIXED: Store index, not value
                 param_tensor[i] = space.bounds.index(value)
             elif space.param_type == ParameterType.DISCRETE:
-                # FIXED: Store index, not value
                 param_tensor[i] = space.bounds.index(value)
             else:  # CONTINUOUS
-                # Continuous parameters store the actual value
-                param_tensor[i] = value
-
+                if space.log_scale:
+                    param_tensor[i] = math.log(value)
+                else:
+                    param_tensor[i] = value
         return param_tensor
 
     def update_performance(
@@ -528,13 +385,15 @@ class BayesianOptimizationManager:
         param_tensor = torch.zeros(self.param_dim)
         for i, space in enumerate(self.parameter_spaces):
             value = params[space.name]
-
             if space.param_type == ParameterType.CATEGORICAL:
                 param_tensor[i] = space.bounds.index(value)
             elif space.param_type == ParameterType.DISCRETE:
                 param_tensor[i] = space.bounds.index(value)
             else:
-                param_tensor[i] = value
+                if space.log_scale:
+                    param_tensor[i] = math.log(value)
+                else:
+                    param_tensor[i] = value
 
         # Store observation
         self.evaluated_params.append(param_tensor)
@@ -550,6 +409,10 @@ class BayesianOptimizationManager:
 
         print(
             f"\033[93mUpdated performance for worker {worker_id}: {performance:.4f}\033[0m"
+        )
+
+        print(
+            f"\033[91m[DEBUG] Updated with learning rate: {params.get('learning_rate')}\033[0m"
         )
 
         # Refit GP with new data

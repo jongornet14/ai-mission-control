@@ -184,6 +184,14 @@ def generate_worker_configs(
             config_file = config_dir / f"worker_{worker_id}_config.json"
             worker_config.save_config(str(config_file))
 
+            # Save flat hyperparameters for worker in metrics dir
+            metrics_dir = Path(shared_dir) / "metrics"
+            metrics_dir.mkdir(parents=True, exist_ok=True)
+            hyper_file = metrics_dir / f"worker_{worker_id}_hyperparameters.json"
+            with open(hyper_file, "w") as f:
+                json.dump(optimized_params, f, indent=2)
+            print(f"Saved hyperparameters for worker {worker_id}: {hyper_file}")
+
             generated_configs.append(str(config_file))
             print(f"Saved config for worker {worker_id}: {config_file}")
 

@@ -25,7 +25,7 @@ logging.basicConfig(
 
 
 class MinimalCoordinator:
-    def __init__(self, shared_dir, num_workers=4, check_interval=30, top_fraction=0.25):
+    def __init__(self, shared_dir, num_workers=4, check_interval=30, top_fraction=0.5):
         self.shared_dir = Path(shared_dir)
         self.num_workers = num_workers
         self.check_interval = check_interval

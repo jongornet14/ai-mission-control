@@ -472,12 +472,6 @@ class BaseWorker:
                 # Train on episode
                 train_metrics = self.train_on_episode(episode_result["episode_data"])
 
-                if hasattr(self, "crazy_logger") and hasattr(
-                    self.algorithm, "get_hyperparameters"
-                ):
-                    hyperparams = self.algorithm.get_hyperparameters()
-                    self.crazy_logger.log_hyperparameters(hyperparams)
-
                 # Store episode stats
                 self.episode_rewards.append(episode_reward)
                 self.episode_lengths.append(episode_length)
@@ -486,8 +480,22 @@ class BaseWorker:
                 if episode_reward > self.best_reward:
                     self.best_reward = episode_reward
 
+                # Log initial setup
+                env_info = {
+                    "worker_id": self.worker_id,
+                    "environment": env_name,
+                    "device": str(self.device),
+                    "obs_space_shape": list(self.env.observation_space.shape),
+                    "action_space_type": str(type(self.env.action_space)),
+                    "learning_rate": lr,
+                }
+
                 # Log episode
                 self.log_episode(episode_reward, episode_length, train_metrics)
+
+                hyperparams = self.algorithm.get_hyperparameters()
+                hyperparams.update(env_info)
+                self.crazy_logger.log_hyperparameters(hyperparams)
 
                 # Progress updates
                 if episode % self.status_update_frequency == 0:

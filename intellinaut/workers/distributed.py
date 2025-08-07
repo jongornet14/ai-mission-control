@@ -10,6 +10,7 @@ import time
 import shutil
 from pathlib import Path
 import sys
+import logging
 
 # Import your base worker
 from intellinaut.workers.base import BaseWorker
@@ -283,6 +284,37 @@ class DistributedWorker(BaseWorker):
                 self.current_episode = episode + 1
                 self.total_episodes += 1
 
+                config_path = (
+                    self.shared_dir
+                    / "metrics"
+                    / f"worker_{self.worker_id}_hyperparameters.json"
+                )
+                if config_path.exists():
+                    with open(config_path, "r") as f:
+                        config = json.load(f)
+                    # Accept both flat dicts and nested configs
+                    if isinstance(config, dict) and all(
+                        isinstance(v, (int, float)) for v in config.values()
+                    ):
+                        new_hyperparams = config
+                    elif (
+                        "worker" in config and "optimization_params" in config["worker"]
+                    ):
+                        new_hyperparams = config["worker"]["optimization_params"]
+                    else:
+                        new_hyperparams = {}
+                    if new_hyperparams:
+                        self.algorithm.update_hyperparameters(new_hyperparams)
+                        print(
+                            f"\033[92mWorker {self.worker_id}: Applied new hyperparameters from coordinator: {new_hyperparams}\033[0m"
+                        )
+                    else:
+                        logging.warning(
+                            f"No valid hyperparameters found in: {config_path}"
+                        )
+                else:
+                    logging.warning(f"Path not found: {config_path}")
+
                 # Check for coordinator updates periodically
                 if episode % sync_check_frequency == 0 and episode > 0:
                     if self.check_for_coordinator_updates():
@@ -299,11 +331,6 @@ class DistributedWorker(BaseWorker):
                 # Train on episode (uses parent method)
                 train_metrics = self.train_on_episode(episode_result["episode_data"])
 
-                if hasattr(self, "logger") and hasattr(
-                    self.algorithm, "get_hyperparams"
-                ):
-                    self.logger.log_hyperparameters(self.algorithm.get_hyperparams())
-
                 # Update tracking (same as parent)
                 self.episode_rewards.append(episode_reward)
                 self.episode_lengths.append(episode_length)
@@ -312,7 +339,21 @@ class DistributedWorker(BaseWorker):
                     self.best_reward = episode_reward
 
                 # Log episode (uses parent method)
+                env_info = {
+                    "worker_id": self.worker_id,
+                    "environment": env_name,
+                    "device": str(self.device),
+                    "obs_space_shape": list(self.env.observation_space.shape),
+                    "action_space_type": str(type(self.env.action_space)),
+                    "learning_rate": lr,
+                }
+
+                # Log episode
                 self.log_episode(episode_reward, episode_length, train_metrics)
+
+                hyperparams = self.algorithm.get_hyperparameters()
+                hyperparams.update(env_info)
+                self.crazy_logger.log_hyperparameters(hyperparams)
 
                 # Progress updates
                 if episode % self.status_update_frequency == 0:

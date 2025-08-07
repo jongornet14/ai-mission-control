@@ -58,7 +58,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_0_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_0_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -101,7 +101,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_1_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_1_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -143,7 +143,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_2_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_2_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -185,7 +185,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_3_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_3_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -227,7 +227,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_4_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_4_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -269,7 +269,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_5_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_5_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -311,7 +311,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_6_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_6_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -353,7 +353,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_7_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_7_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -395,7 +395,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_8_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_8_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -437,7 +437,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_9_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_9_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -479,7 +479,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_10_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_10_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&
@@ -521,7 +521,7 @@ services:
     command: >
       bash -c "
       echo 'Waiting for coordinator to generate configs...' &&
-      while [ ! -f '/workspace/distributed_shared/worker_configs/worker_11_config.json' ]; do
+      while [ ! -f '/workspace/distributed_shared/metrics/worker_11_hyperparameters.json' ]; do
         echo 'Config not ready, waiting 10s...' &&
         sleep 10;
       done &&

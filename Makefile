@@ -283,6 +283,16 @@ dist-warning: ## Show all WARNING lines from all service logs
 	@printf "\033[1;33mSearching for warnings in all logs...\033[0m\n"
 	@docker-compose logs | grep -i "warning" || echo "No warnings found."
 
+.PHONY: dist-hard-stop
+dist-hard-stop: ## Stop all containers and erase all distributed data
+	@printf "\033[1;31mHard stopping distributed training and erasing ALL shared data...\033[0m\n"
+	docker-compose down -v --remove-orphans
+	@printf "\033[1;31mRemoving ./distributed_shared/* ...\033[0m\n"
+	sudo rm -rf ./distributed_shared/*
+	@printf "\033[1;31mRemoving ./tensorboard_videos/* ...\033[0m\n"
+	sudo rm -rf ./tensorboard_videos/*
+	@printf "\033[1;32mAll containers stopped and data erased.\033[0m\n"
+
 # Help
 .PHONY: dist-help
 dist-help: ## Show help for distributed commands

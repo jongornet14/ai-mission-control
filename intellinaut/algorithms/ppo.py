@@ -265,18 +265,55 @@ class PPOAlgorithm:
 
     def update_hyperparameters(self, new_hyperparams):
         """Update hyperparameters during training"""
-        if "learning_rate" in new_hyperparams:
-            self.learning_rate = new_hyperparams["learning_rate"]
-            # Update both optimizers
+        key_map = {
+            "learning_rate": "learning_rate",
+            "lr": "learning_rate",
+            "gamma": "gamma",
+            "gae_lambda": "lambda_gae",
+            "lambda": "lambda_gae",
+            "lambda_gae": "lambda_gae",
+            "clip_epsilon": "clip_epsilon",
+            "clip_range": "clip_epsilon",
+            "entropy_coef": "entropy_coef",
+            "value_function_coef": "critic_coef",
+            "critic_coef": "critic_coef",
+            "batch_size": "batch_size",
+            "max_grad_norm": "max_grad_norm",
+            "num_epochs": "num_epochs",
+            "num_cells": "num_cells",
+        }
+
+        # Always update learning rate in optimizers
+        if "learning_rate" in new_hyperparams or "lr" in new_hyperparams:
+            lr_key = "learning_rate" if "learning_rate" in new_hyperparams else "lr"
+            old_lr = self.learning_rate
+            self.learning_rate = float(new_hyperparams[lr_key])
+            print(
+                f"[PPO] Setting learning rate to {self.learning_rate} (type: {type(self.learning_rate)})"
+            )
             for param_group in self.policy_optimizer.param_groups:
                 param_group["lr"] = self.learning_rate
             for param_group in self.value_optimizer.param_groups:
                 param_group["lr"] = self.learning_rate
+            if old_lr == self.learning_rate:
+                logging.warning(
+                    f"[PPO] Learning rate not changed (still {self.learning_rate})"
+                )
 
-        # Update other hyperparameters as needed
+        # Update other hyperparameters
         for param, value in new_hyperparams.items():
-            if hasattr(self, param):
-                setattr(self, param, value)
+            attr = key_map.get(param, param)
+            if hasattr(self, attr):
+                old_value = getattr(self, attr)
+                setattr(self, attr, value)
+                if old_value == value:
+                    logging.warning(
+                        f"[PPO] Hyperparameter '{attr}' not changed (still {value})"
+                    )
+            else:
+                logging.warning(
+                    f"[PPO] Tried to update unknown hyperparameter '{attr}'"
+                )
 
         print(f" Updated hyperparameters: {new_hyperparams}")
 
