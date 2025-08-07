@@ -1,0 +1,17 @@
+# Enhanced Logging Dependencies
+# Add these to your requirements.txt or install separately
+
+# System monitoring
+psutil>=5.9.0          # CPU and memory monitoring
+GPUtil>=1.4.0          # GPU monitoring  
+
+# Data analysis (optional, for log analysis tools)
+pandas>=1.5.0          # Data analysis for log aggregation
+numpy>=1.21.0          # Numerical operations
+
+# Structured logging (alternative to custom implementation)
+structlog>=22.1.0      # Alternative structured logging library
+
+# For ELK stack integration (optional)
+elasticsearch>=8.0.0   # Elasticsearch client
+elasticsearch-dsl>=8.0.0  # Elasticsearch DSL

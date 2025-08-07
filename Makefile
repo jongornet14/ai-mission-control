@@ -1,12 +1,118 @@
-# Distributed RL Training Makefile
-# Enhanced with JSON Config Support and Bayesian Optimization
+# AI Mission Control - Distributed RL Training Makefile
+# Enhanced with JSON Config Support, Bayesian Optimization, and Scalable Workers
+# Maintains deterministic worker IDs for distributed RL training
+
+# Configuration variables
+WORKERS ?= 4
+CONFIG ?= cartpole_distributed.json
+GPUS ?= 0,1,2,3
+COMPOSE_FILE ?= docker-compose.scalable.yml
+
+##@ Quick Start
+help: ## Show this help message
+	@awk 'BEGIN {FS = ":.*##"; printf "\n\033[1;32mAI Mission Control - Distributed RL Training\033[0m\n\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1;33m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@printf "\n\033[1;34mExamples:\033[0m\n"
+	@printf "  make dist-cartpole                    # CartPole with 4 workers\n"
+	@printf "  make dist-start WORKERS=8 CONFIG=ddpg_halfcheetah.json GPUS=0,1,2,3\n"
+	@printf "  make dist-8 CONFIG=my_config.json     # 8 workers with custom config\n"
+	@printf "  make dist-status                      # Check training status\n"
+	@printf "  make dist-stop                        # Stop everything\n\n"
+
+##@ Logging and Analysis
+logs-analyze: ## Analyze recent logs for issues and progress
+	@printf "\033[1;36mAnalyzing recent training logs...\033[0m\n"
+	@python tools/log_analyzer.py --summary --since 2h
+
+logs-errors: ## Show recent errors and warnings  
+	@printf "\033[1;31mRecent errors and warnings:\033[0m\n"
+	@python tools/log_analyzer.py --errors-only --since 1h
+
+logs-progress: ## Show training progress across all workers
+	@printf "\033[1;32mTraining progress summary:\033[0m\n"
+	@python tools/log_analyzer.py --training-progress --since 6h
+
+logs-performance: ## Show system performance metrics
+	@printf "\033[1;34mSystem performance metrics:\033[0m\n"  
+	@python tools/log_analyzer.py --performance --since 30m
+
+logs-hyperopt: ## Show hyperparameter optimization progress
+	@printf "\033[1;35mHyperparameter optimization progress:\033[0m\n"
+	@python tools/log_analyzer.py --hyperopt
+
+logs-worker: ## Show logs for specific worker (make logs-worker WORKER=0)
+	@if [ -z "$(WORKER)" ]; then \
+		printf "\033[1;31mUsage: make logs-worker WORKER=0\033[0m\n"; \
+		exit 1; \
+	fi
+	@printf "\033[1;36mLogs for worker $(WORKER):\033[0m\n"
+	@python tools/log_analyzer.py --worker $(WORKER) --since 1h
+
+logs-tail: ## Tail recent structured logs in real-time
+	@printf "\033[1;36mTailing structured logs (Ctrl+C to stop)...\033[0m\n"
+	@tail -f distributed_shared/structured/*.jsonl 2>/dev/null | \
+		while read line; do \
+			echo "$$line" | python -c "import sys, json; data=json.loads(sys.stdin.read()); print(f\"[{data.get('iso_timestamp','?')}][{data.get('level','?'):5}][{data.get('component','?')}] {data.get('message','?')}\")"; \
+		done || echo "No structured logs found"
+
+logs-search: ## Search logs for specific terms (make logs-search TERM="error")
+	@if [ -z "$(TERM)" ]; then \
+		printf "\033[1;31mUsage: make logs-search TERM=\"your search term\"\033[0m\n"; \
+		exit 1; \
+	fi
+	@printf "\033[1;36mSearching logs for: $(TERM)\033[0m\n"
+	@grep -r "$(TERM)" distributed_shared/structured/ 2>/dev/null | head -20 || echo "No matches found"
+
+logs-clean: ## Clean old log files (keep last 7 days)
+	@printf "\033[1;33mCleaning old log files...\033[0m\n"
+	@find distributed_shared/structured/ -name "*.jsonl" -mtime +7 -delete 2>/dev/null || true
+	@find distributed_shared/ -name "*.log" -mtime +7 -delete 2>/dev/null || true
+	@printf "\033[1;32m✓ Old logs cleaned\033[0m\n"
+
+##@ Training
 
 .PHONY: dist-start
-dist-start: ## Start distributed training (2 workers by default)
+dist-start: _setup-dirs _validate-config ## Start distributed training with scalable workers
 	@printf "\033[1;32mStarting distributed training with JSON configs...\033[0m\n"
-	@printf "\033[1;36mArchitecture: Bayesian Optimization + DistributedWorker(BaseWorker)\033[0m\n"
-	@printf "\033[1;33mUsing config: ${CONFIG:-cartpole_distributed.json}\033[0m\n"
-	CONFIG=${CONFIG:-cartpole_distributed.json} docker-compose up -d
+	@printf "\033[1;36mArchitecture: Bayesian Optimization + Scalable Workers\033[0m\n"
+	@printf "\033[1;33mWorkers: $(WORKERS), Config: $(CONFIG), GPUs: $(GPUS)\033[0m\n"
+	@NUM_WORKERS=$(WORKERS) CONFIG_FILE=$(CONFIG) \
+		docker-compose -f $(COMPOSE_FILE) up -d coordinator jupyter tensorboard dev
+	@$(MAKE) _wait-coordinator
+	@$(MAKE) _start-workers WORKERS=$(WORKERS) GPUS=$(GPUS)
+
+_setup-dirs:
+	@mkdir -p distributed_shared/metrics distributed_shared/worker_logs logs
+
+_validate-config:
+	@if [ ! -f "configs/$(CONFIG)" ]; then \
+		printf "\033[1;31mConfig file 'configs/$(CONFIG)' not found!\033[0m\n"; \
+		printf "\033[1;33mAvailable configs:\033[0m\n"; \
+		ls -1 configs/*.json 2>/dev/null || echo "  No config files found"; \
+		exit 1; \
+	fi
+
+_wait-coordinator:
+	@printf "\033[1;33mWaiting for coordinator to be healthy...\033[0m\n"
+	@timeout=60; while [ $$timeout -gt 0 ]; do \
+		if docker-compose -f $(COMPOSE_FILE) ps coordinator | grep -q "healthy"; then \
+			printf "\033[1;32m✓ Coordinator is healthy!\033[0m\n"; \
+			break; \
+		fi; \
+		printf "Waiting... ($$timeout seconds remaining)\n"; \
+		sleep 2; \
+		timeout=$$((timeout-2)); \
+	done
+
+_start-workers:
+	@printf "\033[1;32mStarting $(WORKERS) workers with GPU distribution...\033[0m\n"
+	@printf "\033[1;33mGenerating distributed worker configuration...\033[0m\n"
+	@python3 scripts/generate_docker_compose_distributed.py --workers $(WORKERS) --gpus "$(GPUS)" --output docker-compose.distributed.yml
+	@printf "\033[1;33mStarting $(WORKERS) workers across GPUs: $(GPUS)\033[0m\n"
+	@docker-compose -f docker-compose.scalable.yml -f docker-compose.distributed.yml up -d
+	@printf "\033[1;32m✓ All $(WORKERS) workers started\033[0m\n"
+
+# Note: Individual worker creation is handled by docker-compose scaling
+# _create-worker target is deprecated in favor of docker-compose --scale
 
 .PHONY: dist-start-fg
 dist-start-fg: ## Start distributed training in foreground (see logs)
@@ -15,9 +121,13 @@ dist-start-fg: ## Start distributed training in foreground (see logs)
 	CONFIG=${CONFIG:-cartpole_distributed.json} docker-compose up
 
 .PHONY: dist-stop
-dist-stop: ## Stop distributed training
+dist-stop: ## Stop all distributed training services
 	@printf "\033[1;31mStopping distributed training...\033[0m\n"
-	docker-compose down
+	@docker-compose -f $(COMPOSE_FILE) down --remove-orphans 2>/dev/null || true
+	@for i in $$(seq 0 15); do \
+		docker rm -f "rl-worker-$$i" 2>/dev/null || true; \
+	done
+	@printf "\033[1;32m✓ All services stopped\033[0m\n"
 
 .PHONY: dist-restart
 dist-restart: ## Restart distributed training
@@ -27,13 +137,18 @@ dist-restart: ## Restart distributed training
 	$(MAKE) dist-start
 
 .PHONY: dist-status
-dist-status: ## Show distributed training status
+dist-status: ## Show distributed training status with worker details
 	@printf "\033[1;35mDistributed Training Status:\033[0m\n"
 	@echo "==============================="
-	@docker-compose ps
+	@docker-compose -f $(COMPOSE_FILE) ps 2>/dev/null || true
 	@echo ""
-	@printf "\033[1;36mContainer Health:\033[0m\n"
-	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(rl-|ai-mc-)"
+	@printf "\033[1;36mWorker Container Status:\033[0m\n"
+	@for i in $$(seq 0 15); do \
+		if docker ps --format "{{.Names}}\t{{.Status}}" 2>/dev/null | grep -q "rl-worker-$$i"; then \
+			STATUS=$$(docker ps --format "{{.Status}}" --filter "name=rl-worker-$$i" 2>/dev/null); \
+			printf "\033[1;32mWorker $$i: $$STATUS\033[0m\n"; \
+		fi; \
+	done
 	@echo ""
 	@if [ -f "./distributed_shared/coordinator_status.json" ]; then \
 		printf "\033[1;34mCoordinator Status:\033[0m\n"; \
@@ -92,16 +207,35 @@ dist-rebuild: ## Force rebuild all Docker images
 	@printf "\033[1;34mForce rebuilding Docker images...\033[0m\n"
 	docker-compose build --no-cache
 
-# Environment shortcuts with JSON configs
+# Quick start commands with scalable workers
 .PHONY: dist-cartpole
-dist-cartpole: ## Start CartPole distributed training
-	@printf "\033[1;32mStarting CartPole distributed training...\033[0m\n"
-	CONFIG=cartpole_distributed.json $(MAKE) dist-start
+dist-cartpole: ## Start CartPole distributed training (4 workers)
+	@$(MAKE) dist-start WORKERS=4 CONFIG=cartpole_distributed.json GPUS=0,1,2,3
 
-.PHONY: dist-halfcheetah
-dist-halfcheetah: ## Start HalfCheetah distributed training
-	@printf "\033[1;32mStarting HalfCheetah distributed training...\033[0m\n"
-	CONFIG=halfcheetah_distributed.json $(MAKE) dist-start
+.PHONY: dist-ddpg-halfcheetah  
+dist-ddpg-halfcheetah: ## Start DDPG HalfCheetah training (8 workers)
+	@$(MAKE) dist-start WORKERS=8 CONFIG=ddpg_halfcheetah.json GPUS=0,1,2,3
+
+.PHONY: dist-quick-dev
+dist-quick-dev: ## Quick development setup (services only)
+	@printf "\033[1;32mStarting development environment...\033[0m\n"
+	@$(MAKE) _setup-dirs
+	@docker-compose -f $(COMPOSE_FILE) up -d dev jupyter tensorboard
+	@printf "\033[1;32m✓ Access: http://localhost:8080 (Jupyter) | http://localhost:6006 (TensorBoard)\033[0m\n"
+
+# Multi-worker shortcuts
+.PHONY: dist-2 dist-4 dist-8 dist-12
+dist-2: ## Start with 2 workers
+	@$(MAKE) dist-start WORKERS=2
+
+dist-4: ## Start with 4 workers  
+	@$(MAKE) dist-start WORKERS=4
+
+dist-8: ## Start with 8 workers
+	@$(MAKE) dist-start WORKERS=8
+
+dist-12: ## Start with 12 workers
+	@$(MAKE) dist-start WORKERS=12
 
 .PHONY: dist-cartpole-fg
 dist-cartpole-fg: ## Start CartPole in foreground

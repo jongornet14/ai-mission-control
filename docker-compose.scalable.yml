@@ -1,0 +1,216 @@
+# AI Mission Control - Scalable Distributed Training
+# Architecture: 1 Coordinator + N Workers (via scaling) + Development Services
+# Maintains deterministic worker IDs for distributed RL training
+
+services:
+  # Coordinator Service
+  coordinator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rl-coordinator
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=""  # Coordinator doesn't need GPU
+      - NUM_WORKERS=${NUM_WORKERS:-4}
+      - CONFIG_FILE=${CONFIG_FILE:-cartpole_distributed.json}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+      - ./configs:/workspace/configs
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/coordinator_entry.py
+      --shared_dir /workspace/distributed_shared
+      --config /workspace/configs/${CONFIG_FILE:-cartpole_distributed.json}
+      --num_workers ${NUM_WORKERS:-4}
+      --check_interval 30
+      "
+    networks:
+      - rl-training
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-f", "/workspace/distributed_shared/coordinator_status.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Scalable Worker Service Template
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      # GPU assignment will be handled by scaling script
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+      - WORKER_ID=${WORKER_ID:-0}
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./logs:/workspace/logs
+      - .:/workspace/project
+      - ./configs:/workspace/configs
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      # Extract worker ID from container name (rl-worker-N format)
+      CONTAINER_NAME=$$(hostname)
+      if [[ $$CONTAINER_NAME =~ rl-worker-([0-9]+) ]]; then
+        WORKER_ID=$${BASH_REMATCH[1]}
+      else
+        echo 'ERROR: Cannot extract worker ID from container name: '$$CONTAINER_NAME
+        exit 1
+      fi
+      
+      echo \"Starting worker with ID: $$WORKER_ID on GPU: $$CUDA_VISIBLE_DEVICES\"
+      
+      # Wait for coordinator and specific worker config
+      echo 'Waiting for coordinator to generate configs...'
+      while [ ! -f \"/workspace/distributed_shared/metrics/worker_$${WORKER_ID}_hyperparameters.json\" ]; do
+        echo \"Config for worker $$WORKER_ID not ready, waiting 10s...\"
+        sleep 10
+      done
+      
+      echo \"Config found for worker $$WORKER_ID, starting training...\"
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      python scripts/worker_entry.py 
+      --worker_id $$WORKER_ID 
+      --shared_dir /workspace/distributed_shared
+      "
+    networks:
+      - rl-training
+    depends_on:
+      coordinator:
+        condition: service_healthy
+    restart: unless-stopped
+    # GPU assignment template - will be overridden by scaling script
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  # Development & Monitoring Services
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-mc-jupyter
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./:/workspace/project
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ai_mc_experiments:/workspace/experiments
+      - ai_mc_logs:/workspace/logs
+      - ai_mc_models:/workspace/models
+    ports:
+      - "8080:8080"
+      - "8888:8888"
+    working_dir: /workspace/project
+    command: >
+      bash -c "
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      jupyter lab 
+      --ip=0.0.0.0 
+      --port=8080 
+      --no-browser 
+      --allow-root
+      --notebook-dir=/workspace
+      "
+    networks:
+      - rl-training
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  tensorboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-mc-tensorboard
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+    volumes:
+      - ./distributed_shared:/workspace/distributed_shared
+      - ai_mc_experiments:/workspace/experiments
+      - ai_mc_logs:/workspace/logs
+    ports:
+      - "6006:6006"
+    working_dir: /workspace
+    command: >
+      bash -c "
+      echo 'Waiting for log directories...' &&
+      sleep 15 &&
+      echo 'Starting TensorBoard...' &&
+      source /opt/miniforge/etc/profile.d/conda.sh &&
+      conda activate automl &&
+      if [ -d '/workspace/distributed_shared/worker_logs' ]; then
+        tensorboard --logdir=/workspace/distributed_shared/worker_logs --host=0.0.0.0 --port=6006 --reload_interval=30;
+      else
+        tensorboard --logdir=/workspace/distributed_shared --host=0.0.0.0 --port=6006 --reload_interval=30;
+      fi
+      "
+    networks:
+      - rl-training
+    depends_on:
+      - coordinator
+
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-mc-dev
+    entrypoint: ""
+    environment:
+      - PYTHONPATH=/workspace/project
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./:/workspace/project
+      - ./distributed_shared:/workspace/distributed_shared
+      - ./configs:/workspace/configs
+      - ai_mc_experiments:/workspace/experiments
+      - ai_mc_logs:/workspace/logs
+      - ai_mc_models:/workspace/models
+    working_dir: /workspace/project
+    command: tail -f /dev/null
+    stdin_open: true
+    tty: true
+    networks:
+      - rl-training
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+networks:
+  rl-training:
+    driver: bridge
+
+volumes:
+  ai_mc_experiments:
+  ai_mc_logs:
+  ai_mc_models:

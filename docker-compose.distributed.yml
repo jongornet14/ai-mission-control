@@ -1,0 +1,218 @@
+services:
+  worker-0:
+    container_name: rl-worker-0
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '0'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=0
+    - WORKER_ID=0
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-1:
+    container_name: rl-worker-1
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '1'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=1
+    - WORKER_ID=1
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-10:
+    container_name: rl-worker-10
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '2'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=2
+    - WORKER_ID=10
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-11:
+    container_name: rl-worker-11
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '3'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=3
+    - WORKER_ID=11
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-2:
+    container_name: rl-worker-2
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '2'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=2
+    - WORKER_ID=2
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-3:
+    container_name: rl-worker-3
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '3'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=3
+    - WORKER_ID=3
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-4:
+    container_name: rl-worker-4
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '0'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=0
+    - WORKER_ID=4
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-5:
+    container_name: rl-worker-5
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '1'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=1
+    - WORKER_ID=5
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-6:
+    container_name: rl-worker-6
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '2'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=2
+    - WORKER_ID=6
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-7:
+    container_name: rl-worker-7
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '3'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=3
+    - WORKER_ID=7
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-8:
+    container_name: rl-worker-8
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '0'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=0
+    - WORKER_ID=8
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+  worker-9:
+    container_name: rl-worker-9
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - capabilities:
+            - gpu
+            device_ids:
+            - '1'
+            driver: nvidia
+    environment:
+    - CUDA_VISIBLE_DEVICES=1
+    - WORKER_ID=9
+    - PYTHONPATH=/workspace/project
+    extends:
+      file: docker-compose.scalable.yml
+      service: worker
+version: '3.8'

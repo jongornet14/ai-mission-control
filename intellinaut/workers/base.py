@@ -18,9 +18,12 @@ import sys
 
 # Intellinaut imports (package structure)
 from ..algorithms.ppo import PPOAlgorithm
+from ..algorithms.ddpg import DDPGAlgorithm
 from ..environments.gym_wrapper import GymEnvironmentWrapper
 from ..logging.logging import CrazyLogger
+from ..logging.enhanced_logger import get_logger, LogLevel, EventType
 from ..environments.gym_wrapper import universal_gym_step
+from ..optimizers.bayesian import BayesianOptimizationManager
 
 
 class BaseWorker:
@@ -34,7 +37,45 @@ class BaseWorker:
     - Docker status indicators
     - Configurable episode limits
     - Async logging for performance
+    - Algorithm selection (PPO, DDPG, etc.)
+    - Optimizer selection (Adam, SGD, RMSprop, etc.)
+    - Hyperparameter optimization (Bayesian, Random, Grid)
     """
+
+    # Available algorithms
+    ALGORITHMS = {
+        "ppo": PPOAlgorithm,
+        "ddpg": DDPGAlgorithm,
+    }
+
+    # Available optimizers
+    OPTIMIZERS = {
+        "adam": torch.optim.Adam,
+        "sgd": torch.optim.SGD,
+        "rmsprop": torch.optim.RMSprop,
+        "adamw": torch.optim.AdamW,
+    }
+
+    # Available hyperparameter optimizers
+    HYPERPARAM_OPTIMIZERS = {
+        "bayesian": "BayesianOptimizationManager",
+        "random": "RandomSearch",
+        "grid": "GridSearch",
+        "none": None,
+    }
+
+    # Popular environment presets
+    ENVIRONMENT_PRESETS = {
+        "cartpole": "CartPole-v1",
+        "lunarlander": "LunarLander-v2", 
+        "mountaincar": "MountainCar-v0",
+        "pendulum": "Pendulum-v1",
+        "halfcheetah": "HalfCheetah-v4",
+        "ant": "Ant-v4",
+        "walker2d": "Walker2d-v4",
+        "humanoid": "Humanoid-v4",
+        "bipedal": "BipedalWalker-v3",
+    }
 
     def __init__(
         self,
@@ -44,6 +85,9 @@ class BaseWorker:
         checkpoint_frequency: int = 50,
         status_update_frequency: int = 10,
         buffer_size: int = 100,
+        algorithm: str = "ppo",
+        optimizer: str = "adam",
+        hyperparam_optimizer: str = "none",
     ):
         """
         Initialize Base Worker
@@ -55,12 +99,23 @@ class BaseWorker:
             checkpoint_frequency: Episodes between model saves
             status_update_frequency: Episodes between status updates
             buffer_size: Size of logging buffer for async writes
+            algorithm: RL algorithm to use ("ppo", "ddpg", etc.)
+            optimizer: Optimizer to use ("adam", "sgd", "rmsprop", "adamw")
+            hyperparam_optimizer: Hyperparameter optimizer ("bayesian", "random", "grid", "none")
         """
         self.worker_id = worker_id
         self.log_dir = Path(log_dir)
         self.max_episodes = max_episodes
         self.checkpoint_frequency = checkpoint_frequency
         self.status_update_frequency = status_update_frequency
+
+        # Configuration
+        self.algorithm_name = algorithm.lower()
+        self.optimizer_name = optimizer.lower()
+        self.hyperparam_optimizer_name = hyperparam_optimizer.lower()
+        
+        # Validate selections
+        self._validate_configuration()
 
         # Create directory structure
         self.log_dir.mkdir(parents=True, exist_ok=True)
@@ -95,22 +150,83 @@ class BaseWorker:
         self.algorithm = None
         self.device = None
         self.crazy_logger = None
+        self.hyperparam_optimizer = None
 
         # Initialize logging
         self._init_logging()
         self._update_status("INITIALIZED")
 
-        print(f"BaseWorker {worker_id} initialized")
-        print(f"Log directory: {log_dir}")
-        print(f"Max episodes: {max_episodes}")
+    def _validate_configuration(self):
+        """Validate algorithm, optimizer, and hyperparam optimizer selections"""
+        if self.algorithm_name not in self.ALGORITHMS:
+            available = ", ".join(self.ALGORITHMS.keys())
+            raise ValueError(f"Unknown algorithm '{self.algorithm_name}'. Available: {available}")
+            
+        if self.optimizer_name not in self.OPTIMIZERS:
+            available = ", ".join(self.OPTIMIZERS.keys())
+            raise ValueError(f"Unknown optimizer '{self.optimizer_name}'. Available: {available}")
+            
+        if self.hyperparam_optimizer_name not in self.HYPERPARAM_OPTIMIZERS:
+            available = ", ".join(self.HYPERPARAM_OPTIMIZERS.keys())
+            raise ValueError(f"Unknown hyperparam optimizer '{self.hyperparam_optimizer_name}'. Available: {available}")
+
+    @classmethod
+    def get_available_algorithms(cls):
+        """Get list of available algorithms"""
+        return list(cls.ALGORITHMS.keys())
+    
+    @classmethod  
+    def get_available_optimizers(cls):
+        """Get list of available optimizers"""
+        return list(cls.OPTIMIZERS.keys())
+    
+    @classmethod
+    def get_available_hyperparam_optimizers(cls):
+        """Get list of available hyperparameter optimizers"""
+        return list(cls.HYPERPARAM_OPTIMIZERS.keys())
+    
+    @classmethod
+    def get_environment_presets(cls):
+        """Get available environment presets"""
+        return cls.ENVIRONMENT_PRESETS.copy()
+
+    def resolve_environment_name(self, env_input: str) -> str:
+        """Resolve environment name from preset or direct name"""
+        if env_input.lower() in self.ENVIRONMENT_PRESETS:
+            return self.ENVIRONMENT_PRESETS[env_input.lower()]
+        return env_input
 
     def _init_logging(self):
         """Initialize logging systems"""
+        # Initialize enhanced logger for structured logging
+        self.logger = get_logger(
+            component_name="worker",
+            worker_id=self.worker_id,
+            shared_dir=str(self.log_dir.parent) if self.log_dir.parent else str(self.log_dir),
+            console_level=LogLevel.INFO,
+            file_level=LogLevel.DEBUG,
+            enable_performance_monitoring=True
+        )
+        
         # Initialize CrazyLogger for detailed ML logging
         self.crazy_logger = CrazyLogger(
             log_dir=str(self.log_dir / "crazy_logs"),
             experiment_name=f"worker_{self.worker_id}",
             buffer_size=1000,
+        )
+
+        # Log initialization with enhanced logger
+        self.logger.log(
+            LogLevel.INFO,
+            "Worker initialized successfully",
+            event_type=EventType.SYSTEM,
+            context={
+                "algorithm": self.algorithm_name,
+                "optimizer": self.optimizer_name,
+                "hyperparam_optimizer": self.hyperparam_optimizer_name,
+                "max_episodes": self.max_episodes,
+                "log_directory": str(self.log_dir)
+            }
         )
 
         # Start async logging thread
@@ -148,7 +264,15 @@ class BaseWorker:
                 time.sleep(1)  # Write every second
 
             except Exception as e:
-                print(f"Worker {self.worker_id}: Logging error: {e}")
+                if hasattr(self, 'logger'):
+                    self.logger.log(
+                        LogLevel.ERROR,
+                        "Async logging worker error",
+                        event_type=EventType.ERROR,
+                        context={"error": str(e), "error_type": type(e).__name__}
+                    )
+                else:
+                    print(f"Worker {self.worker_id}: Logging error: {e}")
                 time.sleep(5)  # Backoff on error
 
     def _write_json_batch(self, data_list: List[Dict]):
@@ -172,7 +296,17 @@ class BaseWorker:
                 json.dump(existing_data, f, indent=2)
 
         except Exception as e:
-            print(f"Worker {self.worker_id}: JSON write error: {e}")
+            self.logger.log(
+                LogLevel.ERROR,
+                "JSON metrics write error",
+                event_type=EventType.ERROR,
+                context={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "file_path": str(self.metrics_file),
+                    "data_count": len(data_list)
+                }
+            )
 
     def _write_pickle_batch(self, data_list: List[Dict]):
         """Write batched pickle data"""
@@ -195,7 +329,17 @@ class BaseWorker:
                 pickle.dump(existing_data, f)
 
         except Exception as e:
-            print(f"Worker {self.worker_id}: Pickle write error: {e}")
+            self.logger.log(
+                LogLevel.ERROR,
+                "Pickle data write error",
+                event_type=EventType.ERROR,
+                context={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "file_path": str(self.detailed_file),
+                    "data_count": len(data_list)
+                }
+            )
 
     def _update_status(self, status: str, **kwargs):
         """Update worker status for Docker monitoring"""
@@ -215,7 +359,19 @@ class BaseWorker:
         # Immediate write for status (critical for Docker)
         self._write_status_immediate(status_data)
 
-        # Also log to stdout for Docker logs
+        # Also log to structured logger and Docker logs
+        self.logger.log(
+            LogLevel.INFO,
+            f"Worker status updated: {status}",
+            event_type=EventType.SYSTEM,
+            context={
+                "status": status,
+                "episode": self.current_episode,
+                "total_episodes": self.total_episodes,
+                "uptime_seconds": int(time.time() - self.start_time),
+                "best_reward": self.best_reward
+            }
+        )
         print(
             f"WORKER_STATUS: {status} worker_id={self.worker_id} episode={self.current_episode}"
         )
@@ -226,10 +382,19 @@ class BaseWorker:
             with open(self.status_file, "w") as f:
                 json.dump(status_data, f, indent=2)
         except Exception as e:
-            print(f"Worker {self.worker_id}: Status write error: {e}")
+            self.logger.log(
+                LogLevel.ERROR,
+                "Status file write error",
+                event_type=EventType.ERROR,
+                context={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "file_path": str(self.status_file)
+                }
+            )
 
     def setup_rl_components(
-        self, env_name: str, device: str = "cuda:0", lr: float = 3e-4
+        self, env_name: str, device: str = "cuda:0", lr: float = 3e-4, **algorithm_config
     ):
         """Initialize RL environment and algorithm"""
         self._update_status("LOADING_COMPONENTS")
@@ -237,24 +402,50 @@ class BaseWorker:
         try:
             self.device = torch.device(device if torch.cuda.is_available() else "cpu")
 
+            # Resolve environment name (handle presets)
+            resolved_env_name = self.resolve_environment_name(env_name)
+
             # Create environment
             env_wrapper = GymEnvironmentWrapper(
-                env_name=env_name,
+                env_name=resolved_env_name,
                 device=self.device,
                 normalize_observations=True,
                 max_episode_steps=None,
             )
             self.env = env_wrapper.create()
 
-            # Create algorithm
-            self.algorithm = PPOAlgorithm(
-                env=self.env, device=self.device, learning_rate=lr
+            # Create algorithm based on selection
+            algorithm_class = self.ALGORITHMS[self.algorithm_name]
+            
+            # Setup algorithm config with optimizer selection
+            config = {
+                "learning_rate": lr,
+                **algorithm_config
+            }
+            
+            # Create algorithm instance
+            self.algorithm = algorithm_class(
+                env=self.env, 
+                device=self.device,
+                **config
             )
+            
+            # Override optimizers if specified
+            if hasattr(self.algorithm, 'policy_optimizer') or hasattr(self.algorithm, 'actor_optimizer'):
+                self._setup_custom_optimizers(lr)
+
+            # Setup hyperparameter optimizer if specified
+            if self.hyperparam_optimizer_name != "none":
+                self._setup_hyperparam_optimizer()
 
             # Log initial setup
             env_info = {
                 "worker_id": self.worker_id,
-                "environment": env_name,
+                "environment": resolved_env_name,
+                "environment_preset": env_name if env_name != resolved_env_name else None,
+                "algorithm": self.algorithm_name,
+                "optimizer": self.optimizer_name,
+                "hyperparam_optimizer": self.hyperparam_optimizer_name,
                 "device": str(self.device),
                 "obs_space_shape": list(self.env.observation_space.shape),
                 "action_space_type": str(type(self.env.action_space)),
@@ -274,15 +465,115 @@ class BaseWorker:
             hyperparams.update(env_info)
             self.crazy_logger.log_hyperparameters(hyperparams)
 
-            self._update_status("READY", environment=env_name, device=str(self.device))
+            self._update_status("READY", environment=resolved_env_name, device=str(self.device))
 
-            print(f"Worker {self.worker_id}: Environment {env_name} created")
-            print(f"Worker {self.worker_id}: PPO algorithm initialized")
-            print(f"Worker {self.worker_id}: Using device {self.device}")
+            # Log initialization completion to enhanced logger
+            self.logger.log(
+                LogLevel.INFO,
+                "RL components setup completed",
+                event_type=EventType.SYSTEM,
+                context={
+                    "environment": resolved_env_name,
+                    "environment_preset": env_name if env_name != resolved_env_name else None,
+                    "algorithm": self.algorithm_name.upper(),
+                    "optimizer": self.optimizer_name,
+                    "device": str(self.device),
+                    "observation_space_shape": list(self.env.observation_space.shape),
+                    "action_space_info": env_info.get("action_space_size") or env_info.get("action_space_shape")
+                }
+            )
 
         except Exception as e:
             self._update_status("ERROR", error=str(e))
             raise e
+
+    def _setup_custom_optimizers(self, lr: float):
+        """Setup custom optimizers for the algorithm"""
+        optimizer_class = self.OPTIMIZERS[self.optimizer_name]
+        
+        if self.algorithm_name == "ppo":
+            # PPO has separate policy and value optimizers
+            if hasattr(self.algorithm, 'policy_net') and hasattr(self.algorithm, 'value_net'):
+                self.algorithm.policy_optimizer = optimizer_class(
+                    self.algorithm.policy_net.parameters(), lr=lr
+                )
+                self.algorithm.value_optimizer = optimizer_class(
+                    self.algorithm.value_net.parameters(), lr=lr
+                )
+        elif self.algorithm_name == "ddpg":
+            # DDPG has separate actor and critic optimizers
+            if hasattr(self.algorithm, 'actor') and hasattr(self.algorithm, 'critic'):
+                self.algorithm.actor_optimizer = optimizer_class(
+                    self.algorithm.actor.parameters(), lr=lr
+                )
+                self.algorithm.critic_optimizer = optimizer_class(
+                    self.algorithm.critic.parameters(), lr=lr
+                )
+        
+        self.logger.log(
+            LogLevel.INFO,
+            f"Custom optimizer configured: {self.optimizer_name}",
+            event_type=EventType.SYSTEM,
+            context={
+                "optimizer_class": optimizer_class.__name__,
+                "algorithm": self.algorithm_name,
+                "learning_rate": lr
+            }
+        )
+
+    def _setup_hyperparam_optimizer(self):
+        """Setup hyperparameter optimizer"""
+        if self.hyperparam_optimizer_name == "bayesian":
+            # Initialize Bayesian optimizer with algorithm's hyperparameter space
+            param_space = self._get_hyperparam_space()
+            self.hyperparam_optimizer = BayesianOptimizationManager(
+                parameter_space=param_space,
+                n_initial_points=10,
+            )
+        elif self.hyperparam_optimizer_name == "random":
+            # Random search implementation would go here
+            self.logger.log(
+                LogLevel.WARNING,
+                "Random search hyperparameter optimizer not yet implemented",
+                event_type=EventType.SYSTEM
+            )
+        elif self.hyperparam_optimizer_name == "grid":
+            # Grid search implementation would go here  
+            self.logger.log(
+                LogLevel.WARNING,
+                "Grid search hyperparameter optimizer not yet implemented",
+                event_type=EventType.SYSTEM
+            )
+        
+        if self.hyperparam_optimizer:
+            self.logger.log(
+                LogLevel.INFO,
+                f"{self.hyperparam_optimizer_name.capitalize()} hyperparameter optimizer initialized",
+                event_type=EventType.SYSTEM,
+                context={"optimizer_type": self.hyperparam_optimizer_name}
+            )
+
+    def _get_hyperparam_space(self):
+        """Get hyperparameter space for optimization based on algorithm"""
+        if self.algorithm_name == "ppo":
+            return {
+                "learning_rate": (1e-5, 1e-2),
+                "gamma": (0.9, 0.9999),
+                "lambda_gae": (0.8, 0.99),
+                "clip_epsilon": (0.1, 0.3),
+                "entropy_coef": (1e-5, 1e-2),
+                "critic_coef": (0.1, 2.0),
+            }
+        elif self.algorithm_name == "ddpg":
+            return {
+                "learning_rate_actor": (1e-5, 1e-2),
+                "learning_rate_critic": (1e-4, 1e-2),
+                "gamma": (0.9, 0.9999),
+                "tau": (0.001, 0.01),
+                "noise_sigma": (0.1, 0.5),
+            }
+        else:
+            return {}
 
     def collect_episode(self) -> Dict[str, Any]:
         """Collect a complete episode with detailed logging"""
@@ -410,30 +701,66 @@ class BaseWorker:
         """Save model checkpoint"""
         try:
             checkpoint = {
-                "policy_state_dict": self.algorithm.policy_net.state_dict(),
-                "value_state_dict": self.algorithm.value_net.state_dict(),
-                "policy_optimizer_state_dict": self.algorithm.policy_optimizer.state_dict(),
-                "value_optimizer_state_dict": self.algorithm.value_optimizer.state_dict(),
+                "algorithm": self.algorithm_name,
+                "optimizer": self.optimizer_name,
+                "hyperparam_optimizer": self.hyperparam_optimizer_name,
                 "worker_id": self.worker_id,
                 "episode": self.current_episode,
                 "total_episodes": self.total_episodes,
                 "best_reward": self.best_reward,
                 "timestamp": time.time(),
+                "algorithm_state": self.algorithm.state_dict(),
             }
+
+            # Algorithm-specific checkpoint data
+            if self.algorithm_name == "ppo":
+                checkpoint.update({
+                    "policy_state_dict": self.algorithm.policy_net.state_dict(),
+                    "value_state_dict": self.algorithm.value_net.state_dict(),
+                    "policy_optimizer_state_dict": self.algorithm.policy_optimizer.state_dict(),
+                    "value_optimizer_state_dict": self.algorithm.value_optimizer.state_dict(),
+                })
+            elif self.algorithm_name == "ddpg":
+                checkpoint.update({
+                    "actor_state_dict": self.algorithm.actor.state_dict(),
+                    "critic_state_dict": self.algorithm.critic.state_dict(),
+                    "target_actor_state_dict": self.algorithm.target_actor.state_dict(),
+                    "target_critic_state_dict": self.algorithm.target_critic.state_dict(),
+                    "actor_optimizer_state_dict": self.algorithm.actor_optimizer.state_dict(),
+                    "critic_optimizer_state_dict": self.algorithm.critic_optimizer.state_dict(),
+                })
 
             model_file = (
                 self.models_dir
-                / f"worker_{self.worker_id}_episode_{self.current_episode}.pt"
+                / f"worker_{self.worker_id}_{self.algorithm_name}_episode_{self.current_episode}.pt"
             )
             torch.save(checkpoint, model_file)
 
-            print(
-                f"Worker {self.worker_id}: Checkpoint saved at episode {self.current_episode}"
+            self.logger.log(
+                LogLevel.INFO,
+                f"Checkpoint saved successfully",
+                event_type=EventType.CHECKPOINT,
+                context={
+                    "episode": self.current_episode,
+                    "model_file": str(model_file),
+                    "best_reward": self.best_reward,
+                    "algorithm": self.algorithm_name
+                }
             )
             return True
 
         except Exception as e:
-            print(f"Worker {self.worker_id}: Checkpoint save error: {e}")
+            self.logger.log(
+                LogLevel.ERROR,
+                "Checkpoint save failed",
+                event_type=EventType.ERROR,
+                context={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "episode": self.current_episode,
+                    "algorithm": self.algorithm_name
+                }
+            )
             return False
 
     def should_terminate(self) -> bool:
@@ -445,17 +772,33 @@ class BaseWorker:
         # Check for termination signals (can be overridden in subclasses)
         return False
 
-    def run(self, env_name: str, device: str = "cuda:0", lr: float = 3e-4):
+    def run(self, env_name: str, device: str = "cuda:0", lr: float = 3e-4, **algorithm_config):
         """
         Main training loop - fixed number of episodes
+        
+        Args:
+            env_name: Environment name or preset
+            device: Training device
+            lr: Learning rate
+            **algorithm_config: Additional algorithm-specific configuration
         """
-        print(
-            f"Worker {self.worker_id}: Starting training for {self.max_episodes} episodes"
+        self.logger.log(
+            LogLevel.INFO,
+            f"Starting training session",
+            event_type=EventType.TRAINING_START,
+            context={
+                "max_episodes": self.max_episodes,
+                "algorithm": self.algorithm_name,
+                "environment": env_name,
+                "device": device,
+                "learning_rate": lr,
+                "config": algorithm_config
+            }
         )
 
         try:
             # Setup RL components
-            self.setup_rl_components(env_name=env_name, device=device, lr=lr)
+            self.setup_rl_components(env_name=env_name, device=device, lr=lr, **algorithm_config)
 
             self._update_status("TRAINING")
 
@@ -463,6 +806,10 @@ class BaseWorker:
             for episode in range(self.max_episodes):
                 self.current_episode = episode + 1
                 self.total_episodes += 1
+
+                # Hyperparameter optimization step
+                if self.hyperparam_optimizer and episode > 0 and episode % 50 == 0:
+                    self._optimize_hyperparameters(episode)
 
                 # Collect episode
                 episode_result = self.collect_episode()
@@ -480,10 +827,13 @@ class BaseWorker:
                 if episode_reward > self.best_reward:
                     self.best_reward = episode_reward
 
-                # Log initial setup
+                # Log episode info
+                resolved_env_name = self.resolve_environment_name(env_name)
                 env_info = {
                     "worker_id": self.worker_id,
-                    "environment": env_name,
+                    "environment": resolved_env_name,
+                    "algorithm": self.algorithm_name,
+                    "optimizer": self.optimizer_name,
                     "device": str(self.device),
                     "obs_space_shape": list(self.env.observation_space.shape),
                     "action_space_type": str(type(self.env.action_space)),
@@ -493,6 +843,7 @@ class BaseWorker:
                 # Log episode
                 self.log_episode(episode_reward, episode_length, train_metrics)
 
+                # Update hyperparameters in logs
                 hyperparams = self.algorithm.get_hyperparameters()
                 hyperparams.update(env_info)
                 self.crazy_logger.log_hyperparameters(hyperparams)
@@ -506,9 +857,18 @@ class BaseWorker:
                         episodes_remaining=self.max_episodes - episode,
                     )
 
-                    print(
-                        f"Worker {self.worker_id}: Episode {episode}/{self.max_episodes} | "
-                        f"Reward: {episode_reward:.2f} | Avg: {avg_reward:.2f} | Best: {self.best_reward:.2f}"
+                    self.logger.log(
+                        LogLevel.INFO,
+                        f"Training progress update",
+                        event_type=EventType.TRAINING_PROGRESS,
+                        context={
+                            "episode": episode,
+                            "max_episodes": self.max_episodes,
+                            "episode_reward": episode_reward,
+                            "avg_reward_100": avg_reward,
+                            "best_reward": self.best_reward,
+                            "episodes_remaining": self.max_episodes - episode
+                        }
                     )
 
                 # Checkpointing
@@ -517,28 +877,111 @@ class BaseWorker:
 
                 # Check for early termination
                 if self.should_terminate():
-                    print(f"Worker {self.worker_id}: Early termination requested")
+                    self.logger.log(
+                        LogLevel.INFO,
+                        "Training termination requested",
+                        event_type=EventType.SYSTEM,
+                        context={
+                            "episode": episode,
+                            "reason": "early_termination",
+                            "best_reward": self.best_reward
+                        }
+                    )
                     break
 
             # Training completed
             self._update_status("COMPLETED")
-            print(f"Worker {self.worker_id}: Training completed!")
-            print(f"Best reward: {self.best_reward:.2f}")
-            print(f"Final average: {self._get_avg_reward(100):.2f}")
+            final_avg = self._get_avg_reward(100)
+            self.logger.log(
+                LogLevel.INFO,
+                "Training session completed successfully",
+                event_type=EventType.TRAINING_END,
+                context={
+                    "algorithm": self.algorithm_name,
+                    "total_episodes": self.current_episode,
+                    "best_reward": self.best_reward,
+                    "final_average": final_avg,
+                    "training_duration_seconds": int(time.time() - self.start_time)
+                }
+            )
 
         except KeyboardInterrupt:
             self._update_status("INTERRUPTED")
-            print(f"Worker {self.worker_id}: Training interrupted by user")
+            self.logger.log(
+                LogLevel.WARNING,
+                "Training interrupted by user",
+                event_type=EventType.SYSTEM,
+                context={"episode": self.current_episode, "reason": "keyboard_interrupt"}
+            )
         except Exception as e:
             self._update_status("ERROR", error=str(e))
-            print(f"Worker {self.worker_id}: Training error: {e}")
+            self.logger.log(
+                LogLevel.ERROR,
+                "Training failed with error",
+                event_type=EventType.ERROR,
+                context={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "episode": self.current_episode,
+                    "algorithm": self.algorithm_name
+                }
+            )
             raise
         finally:
             self.cleanup()
 
+    def _optimize_hyperparameters(self, episode: int):
+        """Perform hyperparameter optimization step"""
+        if not self.hyperparam_optimizer:
+            return
+            
+        try:
+            # Get recent performance metric (average reward over last 50 episodes)
+            recent_performance = self._get_avg_reward(50)
+            
+            if self.hyperparam_optimizer_name == "bayesian":
+                # Get current hyperparameters
+                current_hyperparams = self.algorithm.get_hyperparameters()
+                
+                # Register the observation with the optimizer
+                # This would typically be implemented with the actual optimizer's API
+                self.logger.log(
+                    LogLevel.INFO,
+                    "Hyperparameter optimization step",
+                    event_type=EventType.HYPERPARAMETER_OPTIMIZATION,
+                    context={
+                        "episode": episode,
+                        "performance": recent_performance,
+                        "optimizer_type": self.hyperparam_optimizer_name,
+                        "current_hyperparams": current_hyperparams
+                    }
+                )
+                
+                # For now, just log that optimization would happen here
+                # In a full implementation, you would:
+                # 1. Register current hyperparams and performance with optimizer
+                # 2. Get suggested new hyperparams from optimizer
+                # 3. Update algorithm with new hyperparams
+                
+        except Exception as e:
+            self.logger.log(
+                LogLevel.ERROR,
+                "Hyperparameter optimization error",
+                event_type=EventType.ERROR,
+                context={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "optimizer_type": self.hyperparam_optimizer_name
+                }
+            )
+
     def cleanup(self):
         """Cleanup resources"""
-        print(f"Worker {self.worker_id}: Cleaning up...")
+        self.logger.log(
+            LogLevel.INFO,
+            "Worker cleanup started",
+            event_type=EventType.SYSTEM
+        )
 
         # Final checkpoint
         self.save_checkpoint()
@@ -560,7 +1003,16 @@ class BaseWorker:
 
         # Final status
         self._update_status("SHUTDOWN")
-        print(f"Worker {self.worker_id}: Cleanup completed")
+        self.logger.log(
+            LogLevel.INFO,
+            "Worker cleanup completed successfully",
+            event_type=EventType.SYSTEM,
+            context={
+                "total_episodes": self.current_episode,
+                "best_reward": self.best_reward,
+                "total_uptime_seconds": int(time.time() - self.start_time)
+            }
+        )
 
     # Utility methods
     def _to_scalar(self, x):
@@ -598,15 +1050,73 @@ if __name__ == "__main__":
         "--log_dir", type=str, default="./worker_logs", help="Log directory"
     )
     parser.add_argument("--max_episodes", type=int, default=1000, help="Max episodes")
-    parser.add_argument("--env", type=str, default="CartPole-v1", help="Environment")
+    parser.add_argument("--env", type=str, default="CartPole-v1", help="Environment name or preset")
     parser.add_argument("--device", type=str, default="cuda:0", help="Device")
     parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
+    
+    # Algorithm selection
+    parser.add_argument(
+        "--algorithm", type=str, default="ppo", 
+        choices=BaseWorker.get_available_algorithms(),
+        help="RL algorithm to use"
+    )
+    
+    # Optimizer selection  
+    parser.add_argument(
+        "--optimizer", type=str, default="adam",
+        choices=BaseWorker.get_available_optimizers(), 
+        help="Optimizer to use"
+    )
+    
+    # Hyperparameter optimizer selection
+    parser.add_argument(
+        "--hyperparam_optimizer", type=str, default="none",
+        choices=BaseWorker.get_available_hyperparam_optimizers(),
+        help="Hyperparameter optimizer to use"
+    )
+    
+    # Algorithm-specific hyperparameters
+    parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
+    parser.add_argument("--clip_epsilon", type=float, default=0.2, help="PPO clipping parameter")
+    parser.add_argument("--entropy_coef", type=float, default=1e-4, help="Entropy coefficient")
+    parser.add_argument("--tau", type=float, default=0.005, help="DDPG soft update parameter")
 
     args = parser.parse_args()
 
+    # Print available options
+    print("Available algorithms:", BaseWorker.get_available_algorithms())
+    print("Available optimizers:", BaseWorker.get_available_optimizers())
+    print("Available hyperparam optimizers:", BaseWorker.get_available_hyperparam_optimizers())
+    print("Environment presets:", list(BaseWorker.get_environment_presets().keys()))
+    
+    # Create algorithm-specific config
+    algorithm_config = {
+        "gamma": args.gamma,
+    }
+    
+    if args.algorithm == "ppo":
+        algorithm_config.update({
+            "clip_epsilon": args.clip_epsilon,
+            "entropy_coef": args.entropy_coef,
+        })
+    elif args.algorithm == "ddpg":
+        algorithm_config.update({
+            "tau": args.tau,
+        })
+
     # Create and run worker
     worker = BaseWorker(
-        worker_id=args.worker_id, log_dir=args.log_dir, max_episodes=args.max_episodes
+        worker_id=args.worker_id, 
+        log_dir=args.log_dir, 
+        max_episodes=args.max_episodes,
+        algorithm=args.algorithm,
+        optimizer=args.optimizer,
+        hyperparam_optimizer=args.hyperparam_optimizer,
     )
 
-    worker.run(env_name=args.env, device=args.device, lr=args.lr)
+    worker.run(
+        env_name=args.env, 
+        device=args.device, 
+        lr=args.lr,
+        **algorithm_config
+    )
