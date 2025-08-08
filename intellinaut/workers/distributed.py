@@ -14,6 +14,7 @@ import logging
 
 # Import your base worker
 from intellinaut.workers.base import BaseWorker
+from intellinaut.logging.debugging import create_worker_debugger
 
 
 class DistributedWorker(BaseWorker):
@@ -46,8 +47,20 @@ class DistributedWorker(BaseWorker):
         self.shared_dir = Path(shared_dir)
         self.setup_distributed_directories()
 
+        # Initialize debugger for this worker
+        self.debugger = create_worker_debugger(
+            str(self.shared_dir), worker_id=worker_id
+        )
+
         print(f"\033[92mDistributedWorker {worker_id} initialized\033[0m")
         print(f"\033[94mShared directory: {shared_dir}\033[0m")
+        if self.debugger:
+            self.debugger.log_text("INFO", f"DistributedWorker {worker_id} initialized")
+            self.debugger.log_text("INFO", f"Shared directory: {shared_dir}")
+
+        # Make sure BaseWorker does NOT overwrite self.debugger
+        # If BaseWorker sets self.debugger, you may want to refactor BaseWorker to accept a debugger argument
+        # and pass self.debugger to super().__init__ if needed.
 
     def perturb_model(self):
         """
@@ -68,10 +81,18 @@ class DistributedWorker(BaseWorker):
             print(
                 f"\033[92mWorker {self.worker_id}: Model perturbed successfully\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "INFO", f"Worker {self.worker_id}: Model perturbed successfully"
+                )
         except Exception as e:
             print(
                 f"\033[91mWorker {self.worker_id}: Error perturbing model: {e}\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "ERROR", f"Worker {self.worker_id}: Error perturbing model: {e}"
+                )
 
     def setup_distributed_directories(self):
         """Create necessary directories for distributed coordination"""
@@ -92,12 +113,20 @@ class DistributedWorker(BaseWorker):
         print(
             f"\033[92mWorker {self.worker_id}: Distributed directories created\033[0m"
         )
+        if hasattr(self, "debugger") and self.debugger:
+            self.debugger.log_text(
+                "INFO", f"Worker {self.worker_id}: Distributed directories created"
+            )
 
     def check_for_coordinator_updates(self):
         """Check if coordinator has signaled a model update"""
         signal_file = self.signals_dir / f"update_worker_{self.worker_id}.signal"
         if signal_file.exists():
             print(f"\033[93mWorker {self.worker_id}: Update signal received\033[0m")
+            if self.debugger:
+                self.debugger.log_text(
+                    "INFO", f"Worker {self.worker_id}: Update signal received"
+                )
             self.load_best_model_from_coordinator()
             signal_file.unlink()  # Remove the signal file after processing
             return True
@@ -123,12 +152,22 @@ class DistributedWorker(BaseWorker):
             print(
                 f"\033[92mWorker {self.worker_id}: Loaded assigned model from coordinator\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "INFO",
+                    f"Worker {self.worker_id}: Loaded assigned model from coordinator",
+                )
             return True
 
         except Exception as e:
             print(
                 f"\033[91mWorker {self.worker_id}: Error loading assigned model: {e}\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "ERROR",
+                    f"Worker {self.worker_id}: Error loading assigned model: {e}",
+                )
             return False
 
     def save_checkpoint(self):
@@ -170,12 +209,21 @@ class DistributedWorker(BaseWorker):
             print(
                 f"\033[92mWorker {self.worker_id}: Distributed checkpoint saved\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "INFO", f"Worker {self.worker_id}: Distributed checkpoint saved"
+                )
             return True
 
         except Exception as e:
             print(
                 f"\033[91mWorker {self.worker_id}: Distributed checkpoint error: {e}\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "ERROR",
+                    f"Worker {self.worker_id}: Distributed checkpoint error: {e}",
+                )
             return False
 
     def save_performance_metrics(self):
@@ -207,6 +255,11 @@ class DistributedWorker(BaseWorker):
             print(
                 f"\033[91mWorker {self.worker_id}: Error saving performance metrics: {e}\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "ERROR",
+                    f"Worker {self.worker_id}: Error saving performance metrics: {e}",
+                )
             return False
 
     def calculate_reward_change(self):
@@ -236,6 +289,11 @@ class DistributedWorker(BaseWorker):
             print(
                 f"\033[91mWorker {self.worker_id}: Individual termination signal received\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "WARNING",
+                    f"Worker {self.worker_id}: Individual termination signal received",
+                )
             return True
 
         global_terminate = self.shared_dir / "terminate_all.signal"
@@ -243,14 +301,23 @@ class DistributedWorker(BaseWorker):
             print(
                 f"\033[91mWorker {self.worker_id}: Global termination signal received\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "WARNING",
+                    f"Worker {self.worker_id}: Global termination signal received",
+                )
             return True
 
-        # Check for stop_all_workers signal
         stop_all_signal = self.shared_dir / "stop_all_workers.signal"
         if stop_all_signal.exists():
             print(
                 f"\033[91mWorker {self.worker_id}: Stop-all-workers signal received\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "WARNING",
+                    f"Worker {self.worker_id}: Stop-all-workers signal received",
+                )
             return True
 
         return False
@@ -272,10 +339,20 @@ class DistributedWorker(BaseWorker):
         print(
             f"\033[94mSync check frequency: every {sync_check_frequency} episodes\033[0m"
         )
+        if self.debugger:
+            self.debugger.log_text(
+                "INFO", f"Worker {self.worker_id}: Starting distributed training"
+            )
+            self.debugger.log_text("INFO", f"Environment: {env_name}")
+            self.debugger.log_text(
+                "INFO", f"Sync check frequency: every {sync_check_frequency} episodes"
+            )
 
         try:
             # Setup RL components (uses parent method)
+            # Make sure to inject the debugger into the algorithm if possible
             self.setup_rl_components(env_name=env_name, device=device, lr=lr)
+            # If your PPOAlgorithm supports a debugger argument, pass it there as well
 
             self._update_status("DISTRIBUTED_TRAINING")
 
@@ -308,12 +385,30 @@ class DistributedWorker(BaseWorker):
                         print(
                             f"\033[92mWorker {self.worker_id}: Applied new hyperparameters from coordinator: {new_hyperparams}\033[0m"
                         )
+                        if self.debugger:
+                            self.debugger.log_text(
+                                "INFO",
+                                f"Worker {self.worker_id}: Applied new hyperparameters from coordinator: {new_hyperparams}",
+                            )
                     else:
-                        logging.warning(
+                        import warnings
+
+                        warnings.warn(
                             f"No valid hyperparameters found in: {config_path}"
                         )
+                        if self.debugger:
+                            self.debugger.log_text(
+                                "WARNING",
+                                f"No valid hyperparameters found in: {config_path}",
+                            )
                 else:
-                    logging.warning(f"Path not found: {config_path}")
+                    import warnings
+
+                    warnings.warn(f"Path not found: {config_path}")
+                    if self.debugger:
+                        self.debugger.log_text(
+                            "WARNING", f"Path not found: {config_path}"
+                        )
 
                 # Check for coordinator updates periodically
                 if episode % sync_check_frequency == 0 and episode > 0:
@@ -321,6 +416,11 @@ class DistributedWorker(BaseWorker):
                         print(
                             f"\033[94mWorker {self.worker_id}: Coordinator update detected\033[0m"
                         )
+                        if self.debugger:
+                            self.debugger.log_text(
+                                "INFO",
+                                f"Worker {self.worker_id}: Coordinator update detected",
+                            )
                         self.load_best_model_from_coordinator()
 
                 # Collect episode (uses parent method)
@@ -373,6 +473,13 @@ class DistributedWorker(BaseWorker):
                         f"Reward: {episode_reward:.2f} | Avg: {avg_reward:.2f} | "
                         f"Trend: {reward_trend:.3f}\033[0m"
                     )
+                    if self.debugger:
+                        self.debugger.log_text(
+                            "INFO",
+                            f"Worker {self.worker_id}: Episode {episode}/{self.max_episodes} | "
+                            f"Reward: {episode_reward:.2f} | Avg: {avg_reward:.2f} | "
+                            f"Trend: {reward_trend:.3f}",
+                        )
 
                 # Distributed checkpointing
                 if episode % self.checkpoint_frequency == 0:
@@ -383,6 +490,11 @@ class DistributedWorker(BaseWorker):
                     print(
                         f"\033[91mWorker {self.worker_id}: Early termination requested\033[0m"
                     )
+                    if self.debugger:
+                        self.debugger.log_text(
+                            "WARNING",
+                            f"Worker {self.worker_id}: Early termination requested",
+                        )
                     break
 
             # Training completed
@@ -392,15 +504,31 @@ class DistributedWorker(BaseWorker):
             )
             print(f"\033[93mBest reward: {self.best_reward:.2f}\033[0m")
             print(f"\033[94mFinal average: {self._get_avg_reward(100):.2f}\033[0m")
+            if self.debugger:
+                self.debugger.log_text(
+                    "INFO", f"Worker {self.worker_id}: Distributed training completed!"
+                )
+                self.debugger.log_text("INFO", f"Best reward: {self.best_reward:.2f}")
+                self.debugger.log_text(
+                    "INFO", f"Final average: {self._get_avg_reward(100):.2f}"
+                )
 
         except KeyboardInterrupt:
             self._update_status("INTERRUPTED")
             print(
                 f"\033[91mWorker {self.worker_id}: Training interrupted by user\033[0m"
             )
+            if self.debugger:
+                self.debugger.log_text(
+                    "WARNING", f"Worker {self.worker_id}: Training interrupted by user"
+                )
         except Exception as e:
             self._update_status("ERROR", error=str(e))
             print(f"\033[91mWorker {self.worker_id}: Training error: {e}\033[0m")
+            if self.debugger:
+                self.debugger.log_text(
+                    "ERROR", f"Worker {self.worker_id}: Training error: {e}"
+                )
             raise
         finally:
             # Cleanup (uses parent method)

@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import math
-import logging
+from ..logging.debugging import create_algorithm_debugger
 
 
 class PPOAlgorithm:
@@ -54,12 +54,28 @@ class PPOAlgorithm:
             self.value_net.parameters(), lr=float(self.learning_rate)
         )
 
-        print(f" Simple PPO Algorithm initialized:")
-        print(
-            f"   Environment: {self.obs_dim} obs -> {self.action_dim} actions ({'discrete' if self.discrete else 'continuous'})"
-        )
-        print(f"   Learning rate: {self.learning_rate}")
-        print(f"   Network size: {self.num_cells} cells")
+        # Debugger for algorithm (optional, can be injected)
+        self.debugger = config.get("debugger", None)
+        if self.debugger is None:
+            # Try to create one if not provided
+            try:
+                self.debugger = create_algorithm_debugger(".", worker_id=0)
+            except Exception:
+                self.debugger = None
+
+        msg1 = "Simple PPO Algorithm initialized:"
+        msg2 = f"   Environment: {self.obs_dim} obs -> {self.action_dim} actions ({'discrete' if self.discrete else 'continuous'})"
+        msg3 = f"   Learning rate: {self.learning_rate}"
+        msg4 = f"   Network size: {self.num_cells} cells"
+        print(msg1)
+        print(msg2)
+        print(msg3)
+        print(msg4)
+        if self.debugger:
+            self.debugger.log_text("INFO", msg1)
+            self.debugger.log_text("INFO", msg2)
+            self.debugger.log_text("INFO", msg3)
+            self.debugger.log_text("INFO", msg4)
 
     def _build_policy_network(self):
         """Build policy network"""
@@ -260,7 +276,12 @@ class PPOAlgorithm:
         }
         for k, v in params.items():
             if not isinstance(v, (int, float)) or math.isnan(v) or math.isinf(v):
-                logging.warning(f"[PPO] Hyperparameter '{k}' has suspicious value: {v}")
+                # logging.warning(f"[PPO] Hyperparameter '{k}' has suspicious value: {v}")
+                if self.debugger:
+                    self.debugger.log_text(
+                        "WARNING",
+                        f"[PPO] Hyperparameter '{k}' has suspicious value: {v}",
+                    )
         return params
 
     def update_hyperparameters(self, new_hyperparams):
@@ -288,18 +309,20 @@ class PPOAlgorithm:
             lr_key = "learning_rate" if "learning_rate" in new_hyperparams else "lr"
             old_lr = self.learning_rate
             self.learning_rate = float(new_hyperparams[lr_key])
-            print(
-                f"[PPO] Setting learning rate to {self.learning_rate} (type: {type(self.learning_rate)})"
-            )
+            msg = f"[PPO] Setting learning rate to {self.learning_rate} (type: {type(self.learning_rate)})"
+            print(msg)
+            if self.debugger:
+                self.debugger.log_text("INFO", msg)
             for param_group in self.policy_optimizer.param_groups:
                 param_group["lr"] = self.learning_rate
             for param_group in self.value_optimizer.param_groups:
                 param_group["lr"] = self.learning_rate
             if old_lr == self.learning_rate:
-                logging.warning(
-                    f"[PPO] Learning rate not changed (still {self.learning_rate})"
-                )
-
+                if self.debugger:
+                    self.debugger.log_text(
+                        "WARNING",
+                        f"[PPO] Learning rate not changed (still {self.learning_rate})",
+                    )
         # Update other hyperparameters
         for param, value in new_hyperparams.items():
             attr = key_map.get(param, param)
@@ -307,15 +330,22 @@ class PPOAlgorithm:
                 old_value = getattr(self, attr)
                 setattr(self, attr, value)
                 if old_value == value:
-                    logging.warning(
-                        f"[PPO] Hyperparameter '{attr}' not changed (still {value})"
-                    )
+                    if self.debugger:
+                        self.debugger.log_text(
+                            "WARNING",
+                            f"[PPO] Hyperparameter '{attr}' not changed (still {value})",
+                        )
             else:
-                logging.warning(
-                    f"[PPO] Tried to update unknown hyperparameter '{attr}'"
-                )
+                if self.debugger:
+                    self.debugger.log_text(
+                        "WARNING",
+                        f"[PPO] Tried to update unknown hyperparameter '{attr}'",
+                    )
 
-        print(f" Updated hyperparameters: {new_hyperparams}")
+        msg = f"Updated hyperparameters: {new_hyperparams}"
+        print(msg)
+        if self.debugger:
+            self.debugger.log_text("INFO", msg)
 
     def state_dict(self):
         """Get algorithm state for saving"""
@@ -326,6 +356,13 @@ class PPOAlgorithm:
             "value_optimizer": self.value_optimizer.state_dict(),
             "hyperparameters": self.get_hyperparameters(),
         }
+
+    def load_state_dict(self, state_dict):
+        """Load algorithm state"""
+        self.policy_net.load_state_dict(state_dict["policy_net"])
+        self.value_net.load_state_dict(state_dict["value_net"])
+        self.policy_optimizer.load_state_dict(state_dict["policy_optimizer"])
+        self.value_optimizer.load_state_dict(state_dict["value_optimizer"])
 
     def load_state_dict(self, state_dict):
         """Load algorithm state"""

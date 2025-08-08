@@ -96,6 +96,9 @@ class BaseWorker:
         self.device = None
         self.crazy_logger = None
 
+        # Debugger (optional, for unified logging)
+        self.debugger = None  # You can inject or initialize a debugger here if desired
+
         # Initialize logging
         self._init_logging()
         self._update_status("INITIALIZED")
@@ -103,6 +106,10 @@ class BaseWorker:
         print(f"BaseWorker {worker_id} initialized")
         print(f"Log directory: {log_dir}")
         print(f"Max episodes: {max_episodes}")
+        if self.debugger:
+            self.debugger.log_text("INFO", f"BaseWorker {worker_id} initialized")
+            self.debugger.log_text("INFO", f"Log directory: {log_dir}")
+            self.debugger.log_text("INFO", f"Max episodes: {max_episodes}")
 
     def _init_logging(self):
         """Initialize logging systems"""

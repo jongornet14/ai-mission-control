@@ -13,9 +13,14 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union, Any
 from dataclasses import dataclass
 from enum import Enum
-import time
-import random
 import math
+import os
+
+# Add import for debugging
+from intellinaut.logging.debugging import (
+    create_hyperparameter_debugger,
+    DistributedDebugger,
+)
 
 
 class ParameterType(Enum):
@@ -154,18 +159,32 @@ class BayesianOptimizationManager:
         self,
         shared_dir: str,
         config: Optional[OptimizationConfig] = None,
+        debugger: Optional[DistributedDebugger] = None,
+        obs_dim: Optional[int] = None,
+        action_dim: Optional[int] = None,
     ):
         """
         Initialize Bayesian Optimizer
 
         Args:
             shared_dir: Directory for saving optimization data
-            obs_dim: Environment observation dimension
-            action_dim: Environment action dimension
+            obs_dim: Environment observation dimension (optional, for future use)
+            action_dim: Environment action dimension (optional, for future use)
             config: Optimization configuration
+            debugger: Optional DistributedDebugger instance
         """
         self.shared_dir = Path(shared_dir)
         self.config = config or OptimizationConfig()
+        self.debugger = debugger or create_hyperparameter_debugger(str(self.shared_dir))
+
+        # Defensive: print where logs will go and what entity this is
+        if self.debugger:
+            print(f"\033[1;36m[DEBUGGER] BayesianOptimizationManager entity '{self.debugger.entity_name}' logs to {self.debugger.logs_dir}\033[0m")
+            self.debugger.log_text(
+                "INFO", f"Initializing BayesianOptimizationManager"
+            )
+        else:
+            print("WARNING: No debugger instance for BayesianOptimizationManager!")
 
         # Create optimization directory
         self.opt_dir = self.shared_dir / "optimization"
@@ -173,7 +192,7 @@ class BayesianOptimizationManager:
 
         # Define parameter space based on data dimensions
         self.parameter_spaces = self._create_parameter_spaces()
-        self.param_dim = len(self.parameter_spaces)
+        self.param_dim = len(self.parameter_spaces)  # <-- Ensure this is always set
 
         # Initialize Gaussian Process
         self.gp = SimpleGaussianProcess(
@@ -189,9 +208,18 @@ class BayesianOptimizationManager:
         self.best_performance = float("-inf")
         self.best_params: Optional[Tensor] = None
 
-        # print(f"\033[94mBayesianOptimizationManager initialized\033[0m")
-        # print(f"\033[93mObs dim: {obs_dim}, Action dim: {action_dim}\033[0m")
+        # Track Docker container ID if running in Docker
+        self.docker_container_id = self._get_docker_container_id()
+        if self.debugger:
+            self.debugger.log_text("INFO", f"Docker container id: {self.docker_container_id}")
+
         print(f"\033[92mParameter space dimension: {self.param_dim}\033[0m")
+        if self.debugger:
+            self.debugger.log_text(
+                "INFO", f"Parameter space dimension: {self.param_dim}"
+            )
+        else:
+            print("WARNING: No debugger instance for BayesianOptimizationManager!")
 
     def suggest_next_configuration(self, worker_id: int) -> Dict[str, Any]:
         """
@@ -204,12 +232,26 @@ class BayesianOptimizationManager:
         # Step 2: Optimize continuous parameters for the best discrete configuration
         next_config = self.optimize_continuous_parameters(best_discrete_config)
 
-        print(
-            f"\033[94mSuggested configuration for worker {worker_id}: {next_config}\033[0m"
-        )
-        print(
-            f"\033[91m[DEBUG] Suggested learning rate: {next_config.get('learning_rate')}\033[0m"
-        )
+        msg1 = f"Suggested configuration for worker {worker_id}: {next_config}"
+        msg2 = f"[DEBUG] Suggested learning rate: {next_config.get('learning_rate')}"
+        print(f"\033[94m{msg1}\033[0m")
+        print(f"\033[91m{msg2}\033[0m")
+        if self.debugger:
+            # Log the current evaluated_params and their learning rates for debugging
+            learning_rates = []
+            for p in self.evaluated_params:
+                idx = 0  # learning_rate is first param
+                if len(p) > idx:
+                    lr_val = p[idx].item()
+                    # If log scale, convert back to real value
+                    lr_val = math.exp(lr_val) if self.parameter_spaces[idx].log_scale else lr_val
+                    learning_rates.append(lr_val)
+            self.debugger.log_text(
+                "DEBUG",
+                f"Evaluated learning rates so far: {learning_rates}"
+            )
+            self.debugger.log_text("INFO", msg1)
+            self.debugger.log_text("DEBUG", msg2)
         return next_config
 
     def _create_parameter_spaces(self) -> List[ParameterSpace]:
@@ -219,7 +261,7 @@ class BayesianOptimizationManager:
             ParameterSpace(
                 name="learning_rate",
                 param_type=ParameterType.CONTINUOUS,
-                bounds=(1e-5, 1e-2),
+                bounds=(1e-5, 1),
                 log_scale=True,
             )
         )
@@ -292,13 +334,30 @@ class BayesianOptimizationManager:
         try:
             mean, variance = self.gp.predict(X)
         except ValueError:  # or the specific error your GP raises
-            print(
-                "\033[93m[WARNING] GP not fitted yet: Thompson sampling is using the prior.\033[0m"
+            warn_msg = (
+                "[WARNING] GP not fitted yet: Thompson sampling is using the prior."
             )
+            print(f"\033[93m{warn_msg}\033[0m")
+            if self.debugger:
+                self.debugger.log_text("WARNING", warn_msg)
             mean = torch.zeros(X.shape[0])
             variance = torch.ones(X.shape[0])  # or use kernel(X, X).diagonal()
         std = torch.sqrt(variance + 1e-8)
-        return torch.normal(mean, std)
+        samples = torch.normal(mean, std)
+        # Log max, argmax, and parameter info for debugging
+        if self.debugger:
+            max_val = samples.max().item()
+            argmax_idx = samples.argmax().item()
+            param_names = [space.name for space in self.parameter_spaces]
+            if X.shape[0] > argmax_idx:
+                argmax_params = {param_names[i]: X[argmax_idx, i].item() for i in range(X.shape[1])}
+            else:
+                argmax_params = {}
+            self.debugger.log_text(
+                "INFO",
+                f"Thompson sampling: max={max_val:.4f}, argmax={argmax_idx}, params_at_argmax={argmax_params}"
+            )
+        return samples
 
     def optimize_continuous_parameters(
         self, discrete_config: Dict[str, Any]
@@ -321,6 +380,17 @@ class BayesianOptimizationManager:
 
         # Global sampling
         global_samples = self.sample_parameter_space(n_dense_samples)
+
+        # Log the range of learning_rate values in the sampled candidates for debugging
+        if self.debugger:
+            lr_idx = 0  # learning_rate is first param
+            lrs = global_samples[:, lr_idx].detach().cpu().numpy()
+            if self.parameter_spaces[lr_idx].log_scale:
+                lrs = np.exp(lrs)
+            self.debugger.log_text(
+                "DEBUG",
+                f"Sampled learning_rate min={lrs.min():.6g}, max={lrs.max():.6g}, mean={lrs.mean():.6g}, std={lrs.std():.6g}"
+            )
 
         global_scores = self.thompson_sampling(global_samples)
         best_idx = torch.argmax(global_scores)
@@ -403,17 +473,20 @@ class BayesianOptimizationManager:
         if performance > self.best_performance:
             self.best_performance = performance
             self.best_params = param_tensor.clone()
-            print(
-                f"\033[92mNew best performance: {performance:.4f} from worker {worker_id}\033[0m"
-            )
+            msg = f"New best performance: {performance:.4f} from worker {worker_id}"
+            print(f"\033[92m{msg}\033[0m")
+            if self.debugger:
+                self.debugger.log_text("INFO", msg)
 
-        print(
-            f"\033[93mUpdated performance for worker {worker_id}: {performance:.4f}\033[0m"
-        )
+        msg2 = f"Updated performance for worker {worker_id}: {performance:.4f}"
+        print(f"\033[93m{msg2}\033[0m")
+        if self.debugger:
+            self.debugger.log_text("INFO", msg2)
 
-        print(
-            f"\033[91m[DEBUG] Updated with learning rate: {params.get('learning_rate')}\033[0m"
-        )
+        msg3 = f"[DEBUG] Updated with learning rate: {params.get('learning_rate')}"
+        print(f"\033[91m{msg3}\033[0m")
+        if self.debugger:
+            self.debugger.log_text("DEBUG", msg3)
 
         # Refit GP with new data
         if len(self.evaluated_params) > 1:
@@ -469,13 +542,17 @@ class BayesianOptimizationManager:
                 y = torch.tensor(self.evaluated_performance, dtype=torch.float32)
                 self.gp.fit(X, y)
 
-            print(
-                f"\033[94mLoaded optimization state: {len(self.evaluated_params)} evaluations\033[0m"
-            )
+            msg = f"Loaded optimization state: {len(self.evaluated_params)} evaluations"
+            print(f"\033[94m{msg}\033[0m")
+            if self.debugger:
+                self.debugger.log_text("INFO", msg)
             return True
 
         except Exception as e:
-            print(f"\033[91mError loading optimization state: {e}\033[0m")
+            err_msg = f"Error loading optimization state: {e}"
+            print(f"\033[91m{err_msg}\033[0m")
+            if self.debugger:
+                self.debugger.log_text("ERROR", err_msg)
             return False
 
     def get_optimization_summary(self) -> Dict[str, Any]:
@@ -493,6 +570,29 @@ class BayesianOptimizationManager:
             ),
         }
 
+    def _get_docker_container_id(self) -> Optional[str]:
+        """
+        Try to get the Docker container ID if running inside a container.
+        Returns the first 12 chars of the container ID, or None if not found.
+        """
+        cgroup_path = "/proc/self/cgroup"
+        try:
+            if os.path.exists(cgroup_path):
+                with open(cgroup_path, "r") as f:
+                    for line in f:
+                        if "docker" in line:
+                            parts = line.strip().split("/")
+                            for part in parts:
+                                if len(part) == 64:  # Docker container ID length
+                                    return part[:12]
+            # Fallback: check for hostname as container id
+            hostname = os.environ.get("HOSTNAME")
+            if hostname and len(hostname) >= 12:
+                return hostname[:12]
+        except Exception:
+            pass
+        return None
+
 
 # Example usage
 if __name__ == "__main__":
@@ -506,6 +606,8 @@ if __name__ == "__main__":
     # Suggest configuration for worker
     config = optimizer.suggest_next_configuration(worker_id=0)
     print("Suggested config:", config)
+    if optimizer.debugger:
+        optimizer.debugger.log_text("INFO", f"Suggested config: {config}")
 
     # Simulate performance update
     optimizer.update_performance(worker_id=0, params=config, performance=1250.5)
@@ -513,3 +615,5 @@ if __name__ == "__main__":
     # Get summary
     summary = optimizer.get_optimization_summary()
     print("Optimization summary:", summary)
+    if optimizer.debugger:
+        optimizer.debugger.log_text("INFO", f"Optimization summary: {summary}")
