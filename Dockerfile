@@ -130,8 +130,8 @@ if torch.cuda.is_available():\n\
 print(f"NumPy: {np.__version__}")\n\
 print(f"Gym: {gym.__version__}")\n\
 print("=" * 50)\n\
-print("✅ Core packages imported successfully!")\n\
-print("🚀 AI Mission Control is ready for RL experiments!")\n\
+print("Core packages imported successfully!")\n\
+print("AI Mission Control is ready for RL experiments!")\n\
 print("=" * 50)' > /workspace/scripts/verify_installation.py && \
     chmod +x /workspace/scripts/verify_installation.py
 
