@@ -2,13 +2,13 @@
 
 This system is designed to be **config-file driven** rather than command-line argument heavy. All experiment parameters are defined in JSON config files, making experiments more reproducible and easier to manage.
 
-## 🎯 **Core Philosophy**
+## **Core Philosophy**
 
 **Preferred Approach**: Use config files for everything, minimal CLI args  
 **Avoid**: Long command lines with dozens of arguments  
 **Result**: Clean, reproducible, version-controllable experiments
 
-## 📁 **Available Config Files**
+## **Available Config Files**
 
 ```
 configs/
@@ -18,7 +18,7 @@ configs/
 └── halfcheetah_ddpg_config.json    # DDPG on HalfCheetah
 ```
 
-## 🚀 **Quick Start**
+## **Quick Start**
 
 ### **1. List Available Configs**
 ```bash
@@ -40,7 +40,7 @@ python config_runner.py --config configs/sample_ppo_config.json --worker_id 1
 python config_runner.py --config configs/sample_ddpg_config.json --worker_id 1 --device cpu
 ```
 
-## 📄 **Config File Structure**
+## **Config File Structure**
 
 ```json
 {
@@ -74,7 +74,7 @@ python config_runner.py --config configs/sample_ddpg_config.json --worker_id 1 -
 }
 ```
 
-## 🛠 **Available Options**
+## **Available Options**
 
 ### **Algorithms**
 - `ppo`: Proximal Policy Optimization
@@ -102,7 +102,7 @@ python config_runner.py --config configs/sample_ddpg_config.json --worker_id 1 -
 - `humanoid` → `Humanoid-v4`
 - `bipedal` → `BipedalWalker-v3`
 
-## 🎮 **Usage Examples**
+## **Usage Examples**
 
 ### **PPO on CartPole**
 ```bash
@@ -124,7 +124,7 @@ python config_runner.py --config configs/halfcheetah_ddpg_config.json --worker_i
 python config_runner.py --validate-all
 ```
 
-## 🔧 **Direct Worker Script Usage**
+## **Direct Worker Script Usage**
 
 If you prefer to use the worker script directly:
 
@@ -142,7 +142,7 @@ python scripts/worker_entry.py --list-options
 python scripts/worker_entry.py --config configs/sample_ppo_config.json --validate-config
 ```
 
-## 📊 **Config File Benefits**
+## **Config File Benefits**
 
 1. **Reproducibility**: Exact experiment parameters saved with results
 2. **Version Control**: Config files can be tracked in git
@@ -151,7 +151,7 @@ python scripts/worker_entry.py --config configs/sample_ppo_config.json --validat
 5. **Automation**: Easy to generate configs programmatically
 6. **No Typos**: Less chance of command-line argument mistakes
 
-## 🎯 **Best Practices**
+## **Best Practices**
 
 1. **Use meaningful names**: `cartpole_ppo_baseline.json` not `config1.json`
 2. **Document experiments**: Fill in `experiment.description`
@@ -159,7 +159,7 @@ python scripts/worker_entry.py --config configs/sample_ppo_config.json --validat
 4. **Validate first**: Always validate configs before running
 5. **Small overrides only**: Use CLI args sparingly for minor tweaks
 
-## 🚦 **Validation**
+## **Validation**
 
 The system automatically validates:
 - Algorithm compatibility with environments
@@ -170,7 +170,7 @@ The system automatically validates:
 Example validation:
 ```bash
 $ python config_runner.py --validate configs/sample_ppo_config.json
-✓ sample_ppo_config.json is valid
+sample_ppo_config.json is valid
 ```
 
-This config-driven approach makes your RL experiments much more manageable and reproducible! 🎉
+This config-driven approach makes your RL experiments much more manageable and reproducible!

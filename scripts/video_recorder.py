@@ -467,11 +467,11 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"🎬 TensorBoard Video Recorder")
-    print(f"📁 Shared directory: {args.shared_dir}")
-    print(f"📺 TensorBoard directory: {args.tensorboard_dir}")
-    print(f"🎮 Environment: {args.env_name}")
-    print(f"🖥️  Device: {args.device}")
+    print(f"TensorBoard Video Recorder")
+    print(f"Shared directory: {args.shared_dir}")
+    print(f"TensorBoard directory: {args.tensorboard_dir}")
+    print(f"Environment: {args.env_name}")
+    print(f"Device: {args.device}")
 
     # Create TensorBoard video recorder
     recorder = TensorBoardVideoRecorder(
