@@ -14,11 +14,11 @@ setup(
         # Your dependencies here
     ],
     entry_points={
-        'console_scripts': [
-            'intellinaut=intellinaut.cli.commands:main',
-            'intellinaut-train=intellinaut.cli.commands:train_command',
-            'intellinaut-worker=intellinaut.cli.commands:worker_command',
-            'intellinaut-coordinator=intellinaut.cli.commands:coordinator_command',
+        "console_scripts": [
+            "intellinaut=intellinaut.cli.commands:main",
+            "intellinaut-train=intellinaut.cli.commands:train_command",
+            "intellinaut-worker=intellinaut.cli.commands:worker_command",
+            "intellinaut-coordinator=intellinaut.cli.commands:coordinator_command",
         ],
     },
     classifiers=[
@@ -29,6 +29,6 @@ setup(
     python_requires=">=3.8",
     include_package_data=True,
     package_data={
-        'intellinaut': ['configs/*.yaml', 'configs/**/*.yaml'],
+        "intellinaut": ["configs/*.yaml", "configs/**/*.yaml"],
     },
 )

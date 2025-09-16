@@ -17,24 +17,24 @@ import random
 
 class ReplayBuffer:
     """Simple replay buffer for DDPG"""
-    
+
     def __init__(self, capacity):
         self.buffer = deque(maxlen=capacity)
-    
+
     def push(self, state, action, reward, next_state, done):
         self.buffer.append((state, action, reward, next_state, done))
-    
+
     def sample(self, batch_size):
         batch = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, done = map(np.stack, zip(*batch))
         return (
             torch.FloatTensor(state),
-            torch.FloatTensor(action), 
+            torch.FloatTensor(action),
             torch.FloatTensor(reward).unsqueeze(1),
             torch.FloatTensor(next_state),
-            torch.FloatTensor(done).unsqueeze(1)
+            torch.FloatTensor(done).unsqueeze(1),
         )
-    
+
     def __len__(self):
         return len(self.buffer)
 
@@ -42,20 +42,20 @@ class ReplayBuffer:
 class OrnsteinUhlenbeckNoise:
     """
     Ornstein-Uhlenbeck process for exploration noise
-    
+
     Implements the correct OU process:
     dx_t = theta * (mu - x_t) * dt + sigma * dW_t
-    
+
     Where dW_t is a Wiener process (Brownian motion increment)
     """
-    
-    def __init__(self, size, mu=0., theta=0.15, sigma=0.2, dt=1e-2):
+
+    def __init__(self, size, mu=0.0, theta=0.15, sigma=0.2, dt=1e-2):
         """
         Initialize OU noise process
-        
+
         Args:
             size: Dimension of the noise
-            mu: Long-term mean (drift coefficient)  
+            mu: Long-term mean (drift coefficient)
             theta: Mean reversion rate (how quickly it returns to mu)
             sigma: Volatility of the process
             dt: Time step size for discretization
@@ -74,19 +74,19 @@ class OrnsteinUhlenbeckNoise:
     def sample(self):
         """
         Sample the next noise value using proper OU integration
-        
+
         Uses the analytical solution for the OU process:
         x_{t+dt} = x_t + theta * (mu - x_t) * dt + sigma * sqrt(dt) * N(0,1)
         """
         # Mean-reverting drift term
         drift = self.theta * (self.mu - self.state) * self.dt
-        
+
         # Diffusion term with proper scaling
         diffusion = self.sigma * np.sqrt(self.dt) * np.random.randn(self.size)
-        
+
         # Update state with proper integration
         self.state = self.state + drift + diffusion
-        
+
         return self.state.copy()
 
 
@@ -102,7 +102,9 @@ class DDPGAlgorithm:
         # Algorithm hyperparameters
         self.learning_rate_actor = config.get("learning_rate_actor", 1e-4)
         self.learning_rate_critic = config.get("learning_rate_critic", 1e-3)
-        self.learning_rate = config.get("learning_rate", 1e-4)  # Fallback for compatibility
+        self.learning_rate = config.get(
+            "learning_rate", 1e-4
+        )  # Fallback for compatibility
         self.gamma = config.get("gamma", 0.99)
         self.tau = config.get("tau", 0.005)  # Soft update parameter
         self.batch_size = config.get("batch_size", 64)
@@ -116,11 +118,11 @@ class DDPGAlgorithm:
 
         # Get environment dimensions
         self.obs_dim = env.observation_space.shape[0]
-        
+
         # DDPG is only for continuous actions
         if hasattr(env.action_space, "n"):
             raise ValueError("DDPG is designed for continuous action spaces only")
-        
+
         self.action_dim = env.action_space.shape[0]
         self.action_low = torch.FloatTensor(env.action_space.low).to(device)
         self.action_high = torch.FloatTensor(env.action_space.high).to(device)
@@ -138,32 +140,46 @@ class DDPGAlgorithm:
 
         # Optimizers
         self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), 
-            lr=float(self.learning_rate_actor if hasattr(self, 'learning_rate_actor') else self.learning_rate)
+            self.actor.parameters(),
+            lr=float(
+                self.learning_rate_actor
+                if hasattr(self, "learning_rate_actor")
+                else self.learning_rate
+            ),
         )
         self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), 
-            lr=float(self.learning_rate_critic if hasattr(self, 'learning_rate_critic') else self.learning_rate)
+            self.critic.parameters(),
+            lr=float(
+                self.learning_rate_critic
+                if hasattr(self, "learning_rate_critic")
+                else self.learning_rate
+            ),
         )
 
         # Replay buffer
         self.replay_buffer = ReplayBuffer(self.buffer_size)
-        
+
         # Exploration noise
         self.noise = OrnsteinUhlenbeckNoise(
-            self.action_dim, 
-            sigma=self.noise_sigma, 
+            self.action_dim,
+            sigma=self.noise_sigma,
             theta=self.noise_theta,
-            dt=self.noise_dt
+            dt=self.noise_dt,
         )
-        
+
         # Training step counter
         self.step_count = 0
 
         print(f" Simple DDPG Algorithm initialized:")
-        print(f"   Environment: {self.obs_dim} obs -> {self.action_dim} actions (continuous)")
-        print(f"   Actor LR: {self.learning_rate_actor if hasattr(self, 'learning_rate_actor') else self.learning_rate}")
-        print(f"   Critic LR: {self.learning_rate_critic if hasattr(self, 'learning_rate_critic') else self.learning_rate}")
+        print(
+            f"   Environment: {self.obs_dim} obs -> {self.action_dim} actions (continuous)"
+        )
+        print(
+            f"   Actor LR: {self.learning_rate_actor if hasattr(self, 'learning_rate_actor') else self.learning_rate}"
+        )
+        print(
+            f"   Critic LR: {self.learning_rate_critic if hasattr(self, 'learning_rate_critic') else self.learning_rate}"
+        )
         print(f"   Network size: {self.num_cells} cells")
         print(f"   Buffer size: {self.buffer_size}")
 
@@ -175,30 +191,33 @@ class DDPGAlgorithm:
             nn.Linear(self.num_cells, self.num_cells),
             nn.ReLU(),
             nn.Linear(self.num_cells, self.action_dim),
-            nn.Tanh()  # Actions are scaled to [-1, 1]
+            nn.Tanh(),  # Actions are scaled to [-1, 1]
         )
 
     def _build_critic_network(self):
         """Build critic network (Q-function)"""
+
         class Critic(nn.Module):
             def __init__(self, obs_dim, action_dim, num_cells):
                 super().__init__()
                 self.fc1 = nn.Linear(obs_dim, num_cells)
                 self.fc2 = nn.Linear(num_cells + action_dim, num_cells)
                 self.fc3 = nn.Linear(num_cells, 1)
-                
+
             def forward(self, state, action):
                 x = F.relu(self.fc1(state))
                 x = torch.cat([x, action], dim=1)
                 x = F.relu(self.fc2(x))
                 x = self.fc3(x)
                 return x
-        
+
         return Critic(self.obs_dim, self.action_dim, self.num_cells)
 
     def _scale_action(self, action):
         """Scale action from [-1, 1] to environment's action space"""
-        return self.action_low + (action + 1.0) * 0.5 * (self.action_high - self.action_low)
+        return self.action_low + (action + 1.0) * 0.5 * (
+            self.action_high - self.action_low
+        )
 
     def get_action(self, obs, add_noise=True):
         """Get action from policy"""
@@ -209,15 +228,23 @@ class DDPGAlgorithm:
         with torch.no_grad():
             action = self.actor(obs)
             action = self._scale_action(action)
-            
+
             if add_noise:
                 # Add OU noise for exploration
                 # During warmup, use more exploration; after warmup, gradually reduce
-                noise_scale = 1.0 if self.step_count < self.warmup_steps else max(0.1, 1.0 - (self.step_count - self.warmup_steps) / 100000.0)
-                noise = torch.FloatTensor(self.noise.sample()).to(self.device) * noise_scale
+                noise_scale = (
+                    1.0
+                    if self.step_count < self.warmup_steps
+                    else max(
+                        0.1, 1.0 - (self.step_count - self.warmup_steps) / 100000.0
+                    )
+                )
+                noise = (
+                    torch.FloatTensor(self.noise.sample()).to(self.device) * noise_scale
+                )
                 action = action + noise
                 action = torch.clamp(action, self.action_low, self.action_high)
-            
+
             return action.squeeze(), 0.0  # Return 0.0 for log_prob compatibility
 
     def train_step(self, rollout_data, replay_buffer=None):
@@ -244,7 +271,7 @@ class DDPGAlgorithm:
                 next_obs = next_obs.cpu().numpy()
             if isinstance(done, torch.Tensor):
                 done = done.cpu().numpy()
-                
+
             self.replay_buffer.push(obs, action, reward, next_obs, done)
 
         # Don't train until we have enough samples
@@ -257,7 +284,9 @@ class DDPGAlgorithm:
             }
 
         # Sample batch from replay buffer
-        state, action, reward, next_state, done = self.replay_buffer.sample(self.batch_size)
+        state, action, reward, next_state, done = self.replay_buffer.sample(
+            self.batch_size
+        )
         state = state.to(self.device)
         action = action.to(self.device)
         reward = reward.to(self.device)
@@ -265,7 +294,10 @@ class DDPGAlgorithm:
         done = done.to(self.device)
 
         # Unscale actions for critic (assuming they were stored scaled)
-        action_unscaled = 2.0 * (action - self.action_low) / (self.action_high - self.action_low) - 1.0
+        action_unscaled = (
+            2.0 * (action - self.action_low) / (self.action_high - self.action_low)
+            - 1.0
+        )
 
         # Compute target Q value
         with torch.no_grad():
@@ -317,8 +349,12 @@ class DDPGAlgorithm:
     def get_hyperparameters(self):
         """Get current hyperparameters for logging"""
         params = {
-            "learning_rate_actor": getattr(self, 'learning_rate_actor', self.learning_rate),
-            "learning_rate_critic": getattr(self, 'learning_rate_critic', self.learning_rate),
+            "learning_rate_actor": getattr(
+                self, "learning_rate_actor", self.learning_rate
+            ),
+            "learning_rate_critic": getattr(
+                self, "learning_rate_critic", self.learning_rate
+            ),
             "gamma": self.gamma,
             "tau": self.tau,
             "batch_size": self.batch_size,
@@ -329,14 +365,16 @@ class DDPGAlgorithm:
         }
         for k, v in params.items():
             if not isinstance(v, (int, float)) or math.isnan(v) or math.isinf(v):
-                logging.warning(f"[DDPG] Hyperparameter '{k}' has suspicious value: {v}")
+                logging.warning(
+                    f"[DDPG] Hyperparameter '{k}' has suspicious value: {v}"
+                )
         return params
 
     def update_hyperparameters(self, new_hyperparams):
         """Update hyperparameters during training"""
         key_map = {
             "learning_rate": "learning_rate",
-            "lr": "learning_rate", 
+            "lr": "learning_rate",
             "learning_rate_actor": "learning_rate_actor",
             "learning_rate_critic": "learning_rate_critic",
             "actor_lr": "learning_rate_actor",
@@ -353,50 +391,91 @@ class DDPGAlgorithm:
         }
 
         # Handle learning rate updates for both optimizers
-        if any(key in new_hyperparams for key in ["learning_rate", "lr", "learning_rate_actor", "actor_lr"]):
-            lr_key = next((key for key in ["learning_rate_actor", "actor_lr", "learning_rate", "lr"] 
-                          if key in new_hyperparams), None)
+        if any(
+            key in new_hyperparams
+            for key in ["learning_rate", "lr", "learning_rate_actor", "actor_lr"]
+        ):
+            lr_key = next(
+                (
+                    key
+                    for key in [
+                        "learning_rate_actor",
+                        "actor_lr",
+                        "learning_rate",
+                        "lr",
+                    ]
+                    if key in new_hyperparams
+                ),
+                None,
+            )
             if lr_key:
-                old_lr = getattr(self, 'learning_rate_actor', self.learning_rate)
+                old_lr = getattr(self, "learning_rate_actor", self.learning_rate)
                 new_lr = float(new_hyperparams[lr_key])
                 self.learning_rate_actor = new_lr
                 print(f"[DDPG] Setting actor learning rate to {new_lr}")
                 for param_group in self.actor_optimizer.param_groups:
                     param_group["lr"] = new_lr
                 if old_lr == new_lr:
-                    logging.warning(f"[DDPG] Actor learning rate not changed (still {new_lr})")
+                    logging.warning(
+                        f"[DDPG] Actor learning rate not changed (still {new_lr})"
+                    )
 
         if any(key in new_hyperparams for key in ["learning_rate_critic", "critic_lr"]):
-            lr_key = next((key for key in ["learning_rate_critic", "critic_lr"] 
-                          if key in new_hyperparams), None)
+            lr_key = next(
+                (
+                    key
+                    for key in ["learning_rate_critic", "critic_lr"]
+                    if key in new_hyperparams
+                ),
+                None,
+            )
             if lr_key:
-                old_lr = getattr(self, 'learning_rate_critic', self.learning_rate)
+                old_lr = getattr(self, "learning_rate_critic", self.learning_rate)
                 new_lr = float(new_hyperparams[lr_key])
                 self.learning_rate_critic = new_lr
                 print(f"[DDPG] Setting critic learning rate to {new_lr}")
                 for param_group in self.critic_optimizer.param_groups:
                     param_group["lr"] = new_lr
                 if old_lr == new_lr:
-                    logging.warning(f"[DDPG] Critic learning rate not changed (still {new_lr})")
+                    logging.warning(
+                        f"[DDPG] Critic learning rate not changed (still {new_lr})"
+                    )
 
         # Update other hyperparameters
         for param, value in new_hyperparams.items():
             attr = key_map.get(param, param)
-            if hasattr(self, attr) and param not in ["learning_rate_actor", "learning_rate_critic", "actor_lr", "critic_lr"]:
+            if hasattr(self, attr) and param not in [
+                "learning_rate_actor",
+                "learning_rate_critic",
+                "actor_lr",
+                "critic_lr",
+            ]:
                 old_value = getattr(self, attr)
                 setattr(self, attr, value)
                 if old_value == value:
-                    logging.warning(f"[DDPG] Hyperparameter '{attr}' not changed (still {value})")
-            elif param not in ["learning_rate_actor", "learning_rate_critic", "actor_lr", "critic_lr"]:
-                logging.warning(f"[DDPG] Tried to update unknown hyperparameter '{attr}'")
+                    logging.warning(
+                        f"[DDPG] Hyperparameter '{attr}' not changed (still {value})"
+                    )
+            elif param not in [
+                "learning_rate_actor",
+                "learning_rate_critic",
+                "actor_lr",
+                "critic_lr",
+            ]:
+                logging.warning(
+                    f"[DDPG] Tried to update unknown hyperparameter '{attr}'"
+                )
 
         # Update noise parameters
-        if any(param in new_hyperparams for param in ["noise_sigma", "noise_theta", "noise_dt"]):
+        if any(
+            param in new_hyperparams
+            for param in ["noise_sigma", "noise_theta", "noise_dt"]
+        ):
             self.noise = OrnsteinUhlenbeckNoise(
                 self.action_dim,
                 sigma=self.noise_sigma,
                 theta=self.noise_theta,
-                dt=self.noise_dt
+                dt=self.noise_dt,
             )
 
         print(f" Updated DDPG hyperparameters: {new_hyperparams}")

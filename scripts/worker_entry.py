@@ -33,12 +33,30 @@ def colored(text: str, color: str) -> str:
 def print_available_options():
     """Print all available configuration options"""
     print(colored("=== Available Configuration Options ===", "green"))
-    print(colored(f"Algorithms: {', '.join(BaseWorker.get_available_algorithms())}", "cyan"))
-    print(colored(f"Optimizers: {', '.join(BaseWorker.get_available_optimizers())}", "cyan"))
-    print(colored(f"Hyperparam Optimizers: {', '.join(BaseWorker.get_available_hyperparam_optimizers())}", "cyan"))
-    print(colored(f"Environment Presets: {', '.join(BaseWorker.get_environment_presets().keys())}", "cyan"))
+    print(
+        colored(
+            f"Algorithms: {', '.join(BaseWorker.get_available_algorithms())}", "cyan"
+        )
+    )
+    print(
+        colored(
+            f"Optimizers: {', '.join(BaseWorker.get_available_optimizers())}", "cyan"
+        )
+    )
+    print(
+        colored(
+            f"Hyperparam Optimizers: {', '.join(BaseWorker.get_available_hyperparam_optimizers())}",
+            "cyan",
+        )
+    )
+    print(
+        colored(
+            f"Environment Presets: {', '.join(BaseWorker.get_environment_presets().keys())}",
+            "cyan",
+        )
+    )
     print()
-    
+
     print(colored("=== Environment Preset Mappings ===", "green"))
     for preset, full_name in BaseWorker.get_environment_presets().items():
         print(colored(f"  {preset} -> {full_name}", "blue"))
@@ -48,49 +66,57 @@ def print_available_options():
 def load_and_validate_config(config_path: str) -> ConfigLoader:
     """
     Load and validate a config file
-    
+
     Args:
         config_path: Path to config file
-        
+
     Returns:
         ConfigLoader instance
-        
+
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If config is invalid
     """
     if not Path(config_path).exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
-    
+
     config = ConfigLoader(config_path)
-    
+
     # Validate required sections
     required_sections = ["algorithm", "training"]
     for section in required_sections:
-        if not any(key.startswith(f"{section}.") for key in config.data.keys() if "." in key):
+        if not any(
+            key.startswith(f"{section}.") for key in config.data.keys() if "." in key
+        ):
             # Check if section exists as nested object
             section_data = config.get(section, {})
             if not section_data:
                 raise ValueError(f"Config missing required section: {section}")
-    
+
     # Validate algorithm selection
     algorithm = config.get("algorithm.name", "ppo")
     if algorithm not in BaseWorker.get_available_algorithms():
         available = ", ".join(BaseWorker.get_available_algorithms())
-        raise ValueError(f"Invalid algorithm '{algorithm}' in config. Available: {available}")
-    
+        raise ValueError(
+            f"Invalid algorithm '{algorithm}' in config. Available: {available}"
+        )
+
     # Validate optimizer selection
     optimizer = config.get("algorithm.optimizer", "adam")
     if optimizer not in BaseWorker.get_available_optimizers():
         available = ", ".join(BaseWorker.get_available_optimizers())
-        raise ValueError(f"Invalid optimizer '{optimizer}' in config. Available: {available}")
-    
+        raise ValueError(
+            f"Invalid optimizer '{optimizer}' in config. Available: {available}"
+        )
+
     # Validate hyperparam optimizer
     hyperparam_opt = config.get("algorithm.hyperparam_optimizer", "none")
     if hyperparam_opt not in BaseWorker.get_available_hyperparam_optimizers():
         available = ", ".join(BaseWorker.get_available_hyperparam_optimizers())
-        raise ValueError(f"Invalid hyperparam optimizer '{hyperparam_opt}' in config. Available: {available}")
-    
+        raise ValueError(
+            f"Invalid hyperparam optimizer '{hyperparam_opt}' in config. Available: {available}"
+        )
+
     print(colored(f"✓ Config file validated: {config_path}", "green"))
     return config
 
@@ -98,29 +124,33 @@ def load_and_validate_config(config_path: str) -> ConfigLoader:
 def print_config_summary(config: ConfigLoader, overrides: dict = None):
     """Print a summary of the loaded configuration"""
     print(colored("=== Configuration Summary ===", "green"))
-    
+
     # Experiment info
     exp_name = config.get("experiment.name", "Unnamed Experiment")
     exp_desc = config.get("experiment.description", "No description")
     print(colored(f"Experiment: {exp_name}", "cyan"))
     print(colored(f"Description: {exp_desc}", "blue"))
     print()
-    
+
     # Core settings (with overrides)
-    env_name = overrides.get("env_name") or config.get("environment.name", "CartPole-v1")
+    env_name = overrides.get("env_name") or config.get(
+        "environment.name", "CartPole-v1"
+    )
     algorithm = config.get("algorithm.name", "ppo")
     optimizer = config.get("algorithm.optimizer", "adam")
     hyperparam_opt = config.get("algorithm.hyperparam_optimizer", "none")
-    max_episodes = overrides.get("max_episodes") or config.get("training.max_episodes", 1000)
+    max_episodes = overrides.get("max_episodes") or config.get(
+        "training.max_episodes", 1000
+    )
     device = overrides.get("device") or config.get("training.device", "cuda:0")
-    
+
     print(colored(f"Environment: {env_name}", "yellow"))
     print(colored(f"Algorithm: {algorithm}", "yellow"))
     print(colored(f"Optimizer: {optimizer}", "yellow"))
     print(colored(f"Hyperparam Optimizer: {hyperparam_opt}", "yellow"))
     print(colored(f"Max Episodes: {max_episodes}", "yellow"))
     print(colored(f"Device: {device}", "yellow"))
-    
+
     if overrides:
         overridden_keys = [k for k, v in overrides.items() if v is not None]
         if overridden_keys:
@@ -143,34 +173,48 @@ Usage Examples:
   # List available options
   python scripts/worker_entry.py --list-options
         """,
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     # Primary arguments - config file and worker ID
     parser.add_argument("--config", type=str, help="Path to config JSON file")
     parser.add_argument("--worker_id", type=int, help="Worker ID")
-    
+
     # Optional overrides (minimal set)
-    parser.add_argument("--shared_dir", type=str, help="Shared directory (overrides config)")
+    parser.add_argument(
+        "--shared_dir", type=str, help="Shared directory (overrides config)"
+    )
     parser.add_argument("--device", type=str, help="Device to use (overrides config)")
-    parser.add_argument("--max_episodes", type=int, help="Max episodes (overrides config)")
-    
+    parser.add_argument(
+        "--max_episodes", type=int, help="Max episodes (overrides config)"
+    )
+
     # Utility options
-    parser.add_argument("--list-options", action="store_true", help="List all available options and exit")
-    parser.add_argument("--validate-config", action="store_true", help="Validate config file and exit")
+    parser.add_argument(
+        "--list-options",
+        action="store_true",
+        help="List all available options and exit",
+    )
+    parser.add_argument(
+        "--validate-config", action="store_true", help="Validate config file and exit"
+    )
 
     args = parser.parse_args()
-    
+
     # Handle utility options
     if args.list_options:
         print_available_options()
         return
-        
+
     # Require either config file or show help
     if not args.config and not args.validate_config:
         parser.print_help()
         print(colored("\nError: --config is required", "red"))
-        print(colored("Use --list-options to see available configuration options", "yellow"))
+        print(
+            colored(
+                "Use --list-options to see available configuration options", "yellow"
+            )
+        )
         sys.exit(1)
 
     try:
@@ -182,16 +226,20 @@ Usage Examples:
             load_and_validate_config(args.config)
             print(colored("Config validation successful!", "green"))
             return
-        
+
         # Load and validate main config file
         config = load_and_validate_config(args.config)
-        
+
         # Determine worker ID
         if not args.worker_id:
             # Try to get from config, otherwise require it
             worker_id = config.get("worker_id")
             if worker_id is None:
-                print(colored("Error: --worker_id is required (not found in config)", "red"))
+                print(
+                    colored(
+                        "Error: --worker_id is required (not found in config)", "red"
+                    )
+                )
                 sys.exit(1)
         else:
             worker_id = args.worker_id
@@ -199,66 +247,98 @@ Usage Examples:
         # Extract all values from config with CLI overrides
         overrides = {
             "shared_dir": args.shared_dir,
-            "device": args.device, 
+            "device": args.device,
             "max_episodes": args.max_episodes,
         }
-        
+
         # Core configuration
         env_name = config.get("environment.name", "CartPole-v1")
-        max_episodes = overrides["max_episodes"] or config.get("training.max_episodes", 1000)
+        max_episodes = overrides["max_episodes"] or config.get(
+            "training.max_episodes", 1000
+        )
         device = overrides["device"] or config.get("training.device", "cuda:0")
-        shared_dir = overrides["shared_dir"] or config.get("distributed.shared_dir", "/workspace/shared")
-        
+        shared_dir = overrides["shared_dir"] or config.get(
+            "distributed.shared_dir", "/workspace/shared"
+        )
+
         # Algorithm configuration
         algorithm = config.get("algorithm.name", "ppo")
         optimizer = config.get("algorithm.optimizer", "adam")
         hyperparam_optimizer = config.get("algorithm.hyperparam_optimizer", "none")
         lr = config.get("algorithm.learning_rate", 3e-4)
-        
+
         # Training configuration
         checkpoint_freq = config.get("training.checkpoint_frequency", 50)
         status_update_freq = config.get("training.status_update_frequency", 10)
         sync_frequency = config.get("distributed.sync_frequency", 10)
-        
+
         # Build algorithm-specific configuration from config file
         algorithm_config = {
             "gamma": config.get("algorithm.gamma", 0.99),
         }
-        
+
         if algorithm == "ppo":
-            algorithm_config.update({
-                "lambda_gae": config.get("algorithm.lambda_gae", 0.95),
-                "clip_epsilon": config.get("algorithm.clip_epsilon", 0.2),
-                "entropy_coef": config.get("algorithm.entropy_coef", 1e-4),
-                "critic_coef": config.get("algorithm.critic_coef", 1.0),
-                "max_grad_norm": config.get("algorithm.max_grad_norm", 1.0),
-                "num_epochs": config.get("algorithm.num_epochs", 10),
-                "batch_size": config.get("algorithm.batch_size", 64),
-                "num_cells": config.get("algorithm.num_cells", 256),
-            })
+            algorithm_config.update(
+                {
+                    "lambda_gae": config.get("algorithm.lambda_gae", 0.95),
+                    "clip_epsilon": config.get("algorithm.clip_epsilon", 0.2),
+                    "entropy_coef": config.get("algorithm.entropy_coef", 1e-4),
+                    "critic_coef": config.get("algorithm.critic_coef", 1.0),
+                    "max_grad_norm": config.get("algorithm.max_grad_norm", 1.0),
+                    "num_epochs": config.get("algorithm.num_epochs", 10),
+                    "batch_size": config.get("algorithm.batch_size", 64),
+                    "num_cells": config.get("algorithm.num_cells", 256),
+                }
+            )
         elif algorithm == "ddpg":
-            algorithm_config.update({
-                "learning_rate_actor": config.get("algorithm.learning_rate_actor", lr),
-                "learning_rate_critic": config.get("algorithm.learning_rate_critic", lr * 10),
-                "tau": config.get("algorithm.tau", 0.005),
-                "noise_sigma": config.get("algorithm.noise_sigma", 0.2),
-                "noise_theta": config.get("algorithm.noise_theta", 0.15),
-                "buffer_size": config.get("algorithm.buffer_size", 100000),
-                "batch_size": config.get("algorithm.batch_size", 64),
-                "warmup_steps": config.get("algorithm.warmup_steps", 1000),
-            })
-        
+            algorithm_config.update(
+                {
+                    "learning_rate_actor": config.get(
+                        "algorithm.learning_rate_actor", lr
+                    ),
+                    "learning_rate_critic": config.get(
+                        "algorithm.learning_rate_critic", lr * 10
+                    ),
+                    "tau": config.get("algorithm.tau", 0.005),
+                    "noise_sigma": config.get("algorithm.noise_sigma", 0.2),
+                    "noise_theta": config.get("algorithm.noise_theta", 0.15),
+                    "buffer_size": config.get("algorithm.buffer_size", 100000),
+                    "batch_size": config.get("algorithm.batch_size", 64),
+                    "warmup_steps": config.get("algorithm.warmup_steps", 1000),
+                }
+            )
+
         # Print configuration summary
         print_config_summary(config, overrides)
-        
+
         # Check algorithm-environment compatibility
         if algorithm == "ddpg":
-            continuous_envs = ["pendulum", "halfcheetah", "ant", "walker2d", "humanoid", "bipedal"]
+            continuous_envs = [
+                "pendulum",
+                "halfcheetah",
+                "ant",
+                "walker2d",
+                "humanoid",
+                "bipedal",
+            ]
             env_preset = env_name.lower()
-            if env_preset not in continuous_envs and "continuous" not in env_name.lower():
-                print(colored(f"Warning: DDPG works best with continuous action environments", "yellow"))
-                print(colored(f"Recommended environments for DDPG: {', '.join(continuous_envs)}", "yellow"))
-        
+            if (
+                env_preset not in continuous_envs
+                and "continuous" not in env_name.lower()
+            ):
+                print(
+                    colored(
+                        f"Warning: DDPG works best with continuous action environments",
+                        "yellow",
+                    )
+                )
+                print(
+                    colored(
+                        f"Recommended environments for DDPG: {', '.join(continuous_envs)}",
+                        "yellow",
+                    )
+                )
+
         print(colored(f"Starting Distributed Worker {worker_id}", "green"))
 
         # Create distributed worker
@@ -275,11 +355,11 @@ Usage Examples:
 
         # Run distributed training with config values
         worker.run_distributed(
-            env_name=env_name, 
-            device=device, 
-            lr=lr, 
+            env_name=env_name,
+            device=device,
+            lr=lr,
             sync_check_frequency=sync_frequency,
-            **algorithm_config
+            **algorithm_config,
         )
 
     except FileNotFoundError as e:
