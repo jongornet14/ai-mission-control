@@ -4,7 +4,7 @@
 
 AI Mission Control is a sophisticated, config-driven distributed reinforcement learning system designed for scalable training across multiple GPUs and environments. It supports multiple RL algorithms, intelligent hyperparameter optimization, and seamless orchestration of training experiments.
 
-## 🌟 Features
+## Features
 
 - **Multi-Algorithm Support**: PPO, DDPG with proper Ornstein-Uhlenbeck noise
 - **Distributed Training**: Scalable coordinator-worker architecture
@@ -14,7 +14,7 @@ AI Mission Control is a sophisticated, config-driven distributed reinforcement l
 - **Real-time Monitoring**: TensorBoard integration and Jupyter Lab development environment
 - **Docker Integration**: Containerized deployment with proper resource management
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Quick Start](#-quick-start)
 - [Installation](#-installation)
@@ -27,7 +27,7 @@ AI Mission Control is a sophisticated, config-driven distributed reinforcement l
 - [API Reference](#-api-reference)
 - [Troubleshooting](#-troubleshooting)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -64,7 +64,7 @@ make dist-quick-dev
 - **Jupyter Lab**: http://localhost:8080
 - **Logs**: `make dist-logs`
 
-## 📦 Installation
+## Installation
 
 ### Docker Installation (Recommended)
 
@@ -95,7 +95,7 @@ pip install torch torchvision gymnasium stable-baselines3
 pip install scikit-optimize tensorboard jupyter
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 The system uses JSON configuration files for reproducible experiments. Configurations are stored in the `configs/` directory.
 
@@ -152,7 +152,7 @@ nano configs/my_experiment.json
 make dist-start CONFIG=my_experiment.json WORKERS=6 GPUS=0,1
 ```
 
-## 🏋️ Training
+## Training
 
 ### Distributed Training with Make
 
@@ -249,7 +249,7 @@ Optimized for continuous control tasks with proper noise implementation.
 }
 ```
 
-## 🌍 Environment Support
+## Environment Support
 
 ### Supported Environments
 
@@ -297,7 +297,7 @@ def create_custom_env(env_name, **kwargs):
     return env
 ```
 
-## 📊 Monitoring
+## Monitoring
 
 ### TensorBoard
 
@@ -336,7 +336,7 @@ make dist-status
 ls -la distributed_shared/
 ```
 
-## 🔧 Development
+## Development
 
 ### Development Container
 
@@ -395,7 +395,7 @@ class CustomOptimizer:
         pass
 ```
 
-## 📚 API Reference
+## API Reference
 
 ### Configuration Loader
 
@@ -442,7 +442,7 @@ optimizer = BayesianOptimizer(
 suggestions = optimizer.suggest(n_suggestions=4)
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -521,11 +521,11 @@ done
 3. **Resources**: Monitor GPU memory and CPU usage
 4. **Issues**: Submit issues with logs and configuration files
 
-## 📄 License
+## License
 
 MIT License - see LICENSE file for details.
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
@@ -533,7 +533,7 @@ MIT License - see LICENSE file for details.
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open Pull Request
 
-## 📈 Citation
+## Citation
 
 ```bibtex
 @software{ai_mission_control,
