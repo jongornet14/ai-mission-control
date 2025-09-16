@@ -1,4 +1,4 @@
-# AI Mission Control 🚀
+# AI Mission Control 
 
 **Advanced Distributed Reinforcement Learning Framework with Bayesian Hyperparameter Optimization**
 
